@@ -354,8 +354,8 @@ module Cache #(
   localparam STATE_READ_1 = 11'b000_0000_0100;
   localparam STATE_READ_2 = 11'b000_0000_1000;
   localparam STATE_READ_3 = 11'b000_0001_0000;
-  localparam STATE_READ_FINISH = 11'b000_0010_0000;
-  localparam STATE_UPDATE_TAG = 11'b000_0100_0000;
+  localparam STATE_READ_UPDATE_TAG = 11'b000_0010_0000;
+  localparam STATE_READ_FINISH = 11'b000_0100_0000;
   localparam STATE_WRITE_1 = 11'b000_1000_0000;
   localparam STATE_WRITE_2 = 11'b001_0000_0000;
   localparam STATE_WRITE_3 = 11'b010_0000_0000;
@@ -484,19 +484,19 @@ module Cache #(
 `ifdef DBG
           $display("@(c) read line (4): 0x%h", br_rd_data);
 `endif
-          state <= STATE_READ_FINISH;
+          state <= STATE_READ_UPDATE_TAG;
         end
 
-        STATE_READ_FINISH: begin
+        STATE_READ_UPDATE_TAG: begin
           burst_write_enable_6 <= 0;
           burst_write_enable_7 <= 0;
           // note: reading line can be initiated after a cache eviction
           //       'burst_write_enable_6' and 7 are then high, set to low
           burst_write_enable_tag <= 4'b1111;
-          state <= STATE_UPDATE_TAG;
+          state <= STATE_READ_FINISH;
         end
 
-        STATE_UPDATE_TAG: begin
+        STATE_READ_FINISH: begin
           burst_reading <= 0;
           burst_write_enable_tag <= 0;
           state <= STATE_IDLE;
