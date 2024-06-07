@@ -25,7 +25,7 @@ module BurstRAM #(
     input wire [DATA_BITWIDTH-1:0] wr_data,  // data to write
     input wire [DATA_BITWIDTH/8-1:0] data_mask,  // not implemented (same as 0 in IP component)
     output reg [DATA_BITWIDTH-1:0] rd_data,  // read data
-    output reg rd_data_ready,  // rd_data is valid
+    output reg rd_data_valid,  // rd_data is valid
     output reg busy
 );
 
@@ -73,7 +73,7 @@ module BurstRAM #(
 
   always @(posedge clk) begin
     if (rst) begin
-      rd_data_ready <= 0;
+      rd_data_valid <= 0;
       rd_data <= 0;
       busy <= 1;
       init_calib_delay_counter <= 0;
@@ -128,7 +128,7 @@ module BurstRAM #(
         STATE_READ_DELAY: begin
           if (read_delay_counter == CYCLES_BEFORE_DATA_VALID - 1) begin
             // note: not -1 because state would switch one cycle early
-            rd_data_ready <= 1;
+            rd_data_valid <= 1;
             rd_data <= data[addr_counter];
             addr_counter <= addr_counter + 1;
             state <= STATE_READ_BURST;
@@ -141,7 +141,7 @@ module BurstRAM #(
           addr_counter  <= addr_counter + 1;
           if (burst_counter == BURST_COUNT - 1) begin
             // note: -1 because of non-blocking assignments
-            rd_data_ready <= 0;
+            rd_data_valid <= 0;
             set_new_state_after_command_done;
           end else begin
             rd_data <= data[addr_counter];

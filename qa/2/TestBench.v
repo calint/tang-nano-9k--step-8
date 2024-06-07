@@ -21,7 +21,7 @@ module TestBench;
       .wr_data(wr_data),
       .data_mask(data_mask),
       .rd_data(rd_data),
-      .rd_data_ready(rd_data_ready),
+      .rd_data_valid(rd_data_valid),
       .busy(busy)
   );
   reg cmd = 0;
@@ -30,7 +30,7 @@ module TestBench;
   reg [63:0] wr_data = 0;
   reg [7:0] data_mask = 0;
   wire [63:0] rd_data;
-  wire rd_data_ready;
+  wire rd_data_valid;
   wire busy;
 
   localparam clk_tk = 10;
@@ -65,7 +65,7 @@ module TestBench;
     #clk_tk;
     #clk_tk;
 
-    if (rd_data_ready) $display("test 1 passed");
+    if (rd_data_valid) $display("test 1 passed");
     else $display("test 1 FAILED");
 
     // first data
@@ -92,7 +92,7 @@ module TestBench;
 
     #clk_tk;
 
-    if (!rd_data_ready) $display("test 6 passed");
+    if (!rd_data_valid) $display("test 6 passed");
     else $display("test 6 FAILED");
 
     #clk_tk;
@@ -114,7 +114,7 @@ module TestBench;
     #clk_tk;
     #clk_tk;
 
-    if (rd_data_ready) $display("test 7 passed");
+    if (rd_data_valid) $display("test 7 passed");
     else $display("test 7 FAILED");
 
     // first data
@@ -141,7 +141,7 @@ module TestBench;
 
     #clk_tk;
 
-    if (!rd_data_ready) $display("test 12 passed");
+    if (!rd_data_valid) $display("test 12 passed");
     else $display("test 12 FAILED");
 
     #clk_tk;

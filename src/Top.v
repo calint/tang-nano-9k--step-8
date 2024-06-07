@@ -22,7 +22,7 @@ module Top (
   wire [63:0] br_wr_data;
   wire [7:0] br_data_mask;
   wire [63:0] br_rd_data;
-  wire br_rd_data_ready;
+  wire br_rd_data_valid;
   wire br_busy;
 
   BurstRAM #(
@@ -32,14 +32,14 @@ module Top (
   ) burst_ram (
       .clk(sys_clk),
       .rst(!sys_rst_n),
+      .busy(br_busy),
       .cmd(br_cmd),  // 0: read, 1: write
       .cmd_en(br_cmd_en),  // 1: cmd and addr is valid
       .addr(br_addr),  // 8 bytes word
       .wr_data(br_wr_data),  // data to write
       .data_mask(br_data_mask),  // not implemented (same as 0 in IP component)
       .rd_data(br_rd_data),  // read data
-      .rd_data_ready(br_rd_data_ready),  // rd_data is valid
-      .busy(br_busy)
+      .rd_data_valid(br_rd_data_valid)  // rd_data is valid
   );
 
   // -- Cache
@@ -70,7 +70,7 @@ module Top (
       .br_wr_data(br_wr_data),
       .br_data_mask(br_data_mask),
       .br_rd_data(br_rd_data),
-      .br_rd_data_ready(br_rd_data_ready),
+      .br_rd_data_valid(br_rd_data_valid),
       .br_busy(br_busy)
   );
 

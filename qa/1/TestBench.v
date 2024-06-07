@@ -31,7 +31,7 @@ module TestBench;
   wire [63:0] br_wr_data;
   wire [7:0] br_data_mask;
   wire [63:0] br_rd_data;
-  wire br_rd_data_ready;
+  wire br_rd_data_valid;
   wire br_busy;
 
   BurstRAM #(
@@ -47,7 +47,7 @@ module TestBench;
       .wr_data(br_wr_data),  // data to write
       .data_mask(br_data_mask),  // not implemented (same as 0 in IP component)
       .rd_data(br_rd_data),  // read data
-      .rd_data_ready(br_rd_data_ready),  // rd_data is valid
+      .rd_data_valid(br_rd_data_valid),  // rd_data is valid
       .busy(br_busy)
   );
 
@@ -78,7 +78,7 @@ module TestBench;
       .br_wr_data(br_wr_data),
       .br_data_mask(br_data_mask),
       .br_rd_data(br_rd_data),
-      .br_rd_data_ready(br_rd_data_ready),
+      .br_rd_data_valid(br_rd_data_valid),
       .br_busy(br_busy)
   );
 

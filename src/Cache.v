@@ -29,7 +29,7 @@ module Cache #(
     output reg [63:0] br_wr_data,  // data to write
     output reg [7:0] br_data_mask,  // not implemented (same as 0 in IP component)
     input wire [63:0] br_rd_data,  // read data
-    input wire br_rd_data_ready,  // rd_data is valid
+    input wire br_rd_data_valid,  // rd_data is valid
     input wire br_busy
 );
 
@@ -424,7 +424,7 @@ module Cache #(
 
         STATE_READ_WAIT_FOR_DATA_READY: begin
           br_cmd_en <= 0;
-          if (br_rd_data_ready) begin
+          if (br_rd_data_valid) begin
             // first data has arrived
             burst_write_enable_0 <= 4'b1111;
             burst_data_in_0 <= br_rd_data[31:0];
