@@ -272,7 +272,6 @@ module Cache #(
     if (burst_reading) begin
       // writing to the cache line in a burst read
       // wire the controls from burst control
-      write_enable_tag = burst_write_enable_tag;
       write_enable_0 = burst_write_enable_0;
       write_enable_1 = burst_write_enable_1;
       write_enable_2 = burst_write_enable_2;
@@ -281,6 +280,7 @@ module Cache #(
       write_enable_5 = burst_write_enable_5;
       write_enable_6 = burst_write_enable_6;
       write_enable_7 = burst_write_enable_7;
+      write_enable_tag = burst_write_enable_tag;
       data_in_tag = {1'b0, 1'b1, line_tag_from_address};
       // note: {dirty, valid, upper address bits}
     end else if (burst_writing) begin
