@@ -349,16 +349,17 @@ module Cache #(
   end
 
   reg [10:0] state;
-  localparam STATE_IDLE = 10'b00_0000_0001;
-  localparam STATE_READ_WAIT_FOR_DATA_READY = 10'b00_0000_0010;
-  localparam STATE_READ_1 = 10'b00_0000_0100;
-  localparam STATE_READ_2 = 10'b00_0000_1000;
-  localparam STATE_READ_3 = 10'b00_0001_0000;
-  localparam STATE_READ_FINISH = 10'b00_0010_0000;
-  localparam STATE_WRITE_1 = 10'b00_0100_0000;
-  localparam STATE_WRITE_2 = 10'b00_1000_0000;
-  localparam STATE_WRITE_3 = 10'b01_0000_0000;
-  localparam STATE_WRITE_FINISH = 10'b10_0000_0000;
+  localparam STATE_IDLE = 11'b000_0000_0001;
+  localparam STATE_READ_WAIT_FOR_DATA_READY = 11'b000_0000_0010;
+  localparam STATE_READ_1 = 11'b000_0000_0100;
+  localparam STATE_READ_2 = 11'b000_0000_1000;
+  localparam STATE_READ_3 = 11'b000_0001_0000;
+  localparam STATE_READ_FINISH = 11'b000_0010_0000;
+  localparam STATE_UPDATE_TAG = 11'b000_0100_0000;
+  localparam STATE_WRITE_1 = 11'b000_1000_0000;
+  localparam STATE_WRITE_2 = 11'b001_0000_0000;
+  localparam STATE_WRITE_3 = 11'b010_0000_0000;
+  localparam STATE_WRITE_FINISH = 11'b100_0000_0000;
 
   always @(posedge clk) begin
     if (rst) begin
@@ -480,8 +481,6 @@ module Cache #(
           burst_write_enable_7 <= 4'b1111;
           burst_data_in_7 <= br_rd_data[63:32];
 
-          // write the tag
-          burst_write_enable_tag <= 4'b1111;
 `ifdef DBG
           $display("@(c) read line (4): 0x%h", br_rd_data);
 `endif
@@ -493,8 +492,13 @@ module Cache #(
           burst_write_enable_7 <= 0;
           // note: reading line can be initiated after a cache eviction
           //       'burst_write_enable_6' and 7 are then high, set to low
-          burst_write_enable_tag <= 0;
+          burst_write_enable_tag <= 4'b1111;
+          state <= STATE_UPDATE_TAG;
+        end
+
+        STATE_UPDATE_TAG: begin
           burst_reading <= 0;
+          burst_write_enable_tag <= 0;
           state <= STATE_IDLE;
         end
 

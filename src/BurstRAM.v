@@ -3,7 +3,7 @@
 // to mock IP components
 //
 
-`timescale 1ns / 1ps
+`timescale 100ps / 100ps
 //
 `default_nettype none
 // `define DBG
@@ -79,6 +79,7 @@ module BurstRAM #(
       init_calib_delay_counter <= 0;
       state <= STATE_INITIATE;
     end else begin
+      // $display("BurstRAM: clk  state: %b", state);
       case (state)
 
         STATE_INITIATE: begin

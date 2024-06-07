@@ -1,25 +1,30 @@
-`timescale 1ns / 1ps `default_nettype none
+`timescale 100ps / 100ps
+//
+`default_nettype none
 
 module TestBench;
 
   localparam BURST_RAM_DEPTH_BITWIDTH = 4;
 
-  BurstRAM #(
-      .DATA_FILE("RAM.mem"),  // initial RAM content
-      .DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH),  // 2 ^ 4 * 8 B entries
-      .BURST_COUNT(4)  // 4 * 64 bit data per burst
-  ) burst_ram (
-      .clk(clk),
-      .rst(!sys_rst_n),
-      .cmd(br_cmd),  // 0: read, 1: write
-      .cmd_en(br_cmd_en),  // 1: cmd and addr is valid
-      .addr(br_addr),  // 8 bytes word
-      .wr_data(br_wr_data),  // data to write
-      .data_mask(br_data_mask),  // not implemented (same as 0 in IP component)
-      .rd_data(br_rd_data),  // read data
-      .rd_data_ready(br_rd_data_ready),  // rd_data is valid
-      .busy(br_busy)
+  reg sys_rst_n = 0;
+  reg clk = 1;
+  localparam clk_tk = 37;
+  always #(clk_tk / 2) clk = ~clk;
+
+  wire clkout;
+  wire lock;
+  wire clkoutp;
+  wire clkoutd;
+  wire clkin = clk;
+
+  Gowin_rPLL rpll (
+      .clkout(clkout),  //output clkout
+      .lock(lock),  //output lock
+      .clkoutp(clkoutp),  //output clkoutp
+      .clkoutd(clkoutd),  //output clkoutd
+      .clkin(clkin)  //input clkin
   );
+
   wire br_cmd;
   wire br_cmd_en;
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] br_addr;
@@ -29,12 +34,36 @@ module TestBench;
   wire br_rd_data_ready;
   wire br_busy;
 
+  BurstRAM #(
+      .DATA_FILE("RAM.mem"),  // initial RAM content
+      .DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH),  // 2 ^ 4 * 8 B entries
+      .BURST_COUNT(4)  // 4 * 64 bit data per burst
+  ) burst_ram (
+      .clk(clkout),
+      .rst(!sys_rst_n || !lock),
+      .cmd(br_cmd),  // 0: read, 1: write
+      .cmd_en(br_cmd_en),  // 1: cmd and addr is valid
+      .addr(br_addr),  // 8 bytes word
+      .wr_data(br_wr_data),  // data to write
+      .data_mask(br_data_mask),  // not implemented (same as 0 in IP component)
+      .rd_data(br_rd_data),  // read data
+      .rd_data_ready(br_rd_data_ready),  // rd_data is valid
+      .busy(br_busy)
+  );
+
+  reg [31:0] address;
+  wire [31:0] data_out;
+  wire data_out_ready;
+  reg [31:0] data_in;
+  reg [3:0] write_enable;
+  wire busy;
+
   Cache #(
       .LINE_IX_BITWIDTH(1),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
-      .clk(clk),
-      .rst(!sys_rst_n),
+      .clk(clkout),
+      .rst(!sys_rst_n || !lock),
       .address(address),
       .data_out(data_out),
       .data_out_ready(data_out_ready),
@@ -52,18 +81,6 @@ module TestBench;
       .br_rd_data_ready(br_rd_data_ready),
       .br_busy(br_busy)
   );
-  reg [31:0] address;
-  wire [31:0] data_out;
-  wire data_out_ready;
-  reg [31:0] data_in;
-  reg [3:0] write_enable;
-  wire busy;
-
-  reg clk = 1;
-  reg sys_rst_n = 0;
-
-  localparam clk_tk = 4;
-  always #(clk_tk / 2) clk = ~clk;
 
   integer i;
 
@@ -99,25 +116,8 @@ module TestBench;
     #clk_tk;
     sys_rst_n <= 1;
 
-    while (br_busy) #clk_tk;
-
-    // // dump the cache
-    // for (i = 0; i < 8; i = i + 1) begin
-    //   $display("1). %h : %h  %h  %h  %h", cache.tag.data[i], cache.data0.data[i],
-    //            cache.data1.data[i], cache.data2.data[i], cache.data3.data[i]);
-    // end
-
-    // // write
-    // address <= 4;
-    // data_in <= 32'habcd_ef12;
-    // write_enable <= 4'b1111;
-    // #clk_tk;
-
-    // // write
-    // address <= 8;
-    // data_in <= 32'habcd_1234;
-    // write_enable <= 4'b1111;
-    // #clk_tk;
+    // wait for burst RAM to initiate
+    while (br_busy || !lock) #clk_tk;
 
     // read; cache miss
     address <= 16;
@@ -126,11 +126,10 @@ module TestBench;
 
     while (!data_out_ready) #clk_tk;
 
-    // one cycle delay. value for address 4
     if (data_out == 32'hD5B8A9C4) $display("Test 1 passed");
     else $display("Test 1 FAILED");
 
-    // read; cache hit
+    // read address 8; cache hit; one cycle delay
     address <= 8;
     write_enable <= 0;
     #clk_tk;
@@ -159,7 +158,7 @@ module TestBench;
     if (data_out == 32'h9D8E2F17 && data_out_ready) $display("Test 5 passed");
     else $display("Test 5 FAILED");
 
-    // write; cache hit
+    // write byte; cache hit
     address <= 8;
     data_in <= 32'h0000_00ad;
     write_enable <= 4'b0001;
@@ -175,7 +174,7 @@ module TestBench;
 
     #clk_tk;
 
-    // write
+    // write half-word
     address <= 8;
     data_in <= 32'h00008765;
     write_enable <= 4'b0011;
@@ -189,7 +188,7 @@ module TestBench;
     if (data_out == 32'hAB4C8765 && data_out_ready) $display("Test 8 passed");
     else $display("Test 8 FAILED");
 
-    // write
+    // write upper half-word
     address <= 8;
     data_in <= 32'hfeef0000;
     write_enable <= 4'b1100;
@@ -203,7 +202,7 @@ module TestBench;
     if (data_out == 32'hfeef8765 && data_out_ready) $display("Test 9 passed");
     else $display("Test 9 FAILED");
 
-    // cache miss, evict then write
+    // write word; cache miss; evict then write
     address <= 64;
     data_in <= 32'habcdef12;
     write_enable <= 4'b1111;
@@ -216,10 +215,22 @@ module TestBench;
     write_enable <= 0;
     #clk_tk;
 
-    while (busy) #clk_tk;
-
     if (data_out == 32'habcdef12 && data_out_ready) $display("Test 10 passed");
     else $display("Test 10 FAILED");
+
+    // write word; cache hit
+    address <= 64;
+    data_in <= 32'h1b2d3f42;
+    write_enable <= 4'b1111;
+    #clk_tk;
+
+    // read it back; cache hit
+    address <= 64;
+    write_enable <= 0;
+    #clk_tk;
+
+    if (data_out == 32'h1b2d3f42 && data_out_ready) $display("Test 11 passed");
+    else $display("Test 11 FAILED");
 
     #clk_tk;
     #clk_tk;
