@@ -178,8 +178,6 @@ module TestBench;
     if (data_out == 32'hAB4C3Ead && data_out_ready) $display("Test 6 passed");
     else $display("Test 6 FAILED");
 
-    #clk_tk;
-
     // write half-word
     while (busy) #clk_tk;
     address <= 8;
