@@ -11,7 +11,8 @@
 
 module Cache #(
     parameter LINE_IX_BITWIDTH = 8,
-    parameter BURST_RAM_DEPTH_BITWIDTH = 4
+    parameter BURST_RAM_DEPTH_BITWIDTH = 4,
+    parameter COMMAND_DELAY_INTERVAL = 14
 ) (
     input wire clk,
     input wire rst,
@@ -112,7 +113,10 @@ module Cache #(
   // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
 
   wire cache_line_hit = line_valid && line_tag_from_address == line_tag_from_cache;
-  assign busy = !cache_line_hit;
+
+  reg [5:0] command_delay_interval_counter;
+
+  assign busy = !cache_line_hit || command_delay_interval_counter != 0;
 
   // 8 byte enabled semi dual port RAM blocks
   // 'data_in' connected either to the input if a cache hit write or to the state machine
@@ -374,12 +378,20 @@ module Cache #(
       br_data_mask <= 4'b1111;
       burst_reading <= 0;
       burst_writing <= 0;
+      command_delay_interval_counter <= 0;
       state <= STATE_IDLE;
     end else begin
+      if (command_delay_interval_counter != 0) begin
+`ifdef DBG
+        $display("@(c) command delay interval counter: %0d", command_delay_interval_counter);
+`endif
+        command_delay_interval_counter <= command_delay_interval_counter - 1;
+      end
+
       case (state)
 
         STATE_IDLE: begin
-          if (!cache_line_hit) begin
+          if (!cache_line_hit && command_delay_interval_counter == 0) begin
             // cache miss, start reading the addressed cache line
 `ifdef DBG
             $display("@(c) cache miss address 0x%h  write mask: %b", address, write_enable);
@@ -398,9 +410,10 @@ module Cache #(
 `endif
                 br_cmd <= 1;  // command write
                 br_addr <= burst_dirty_cache_line_address;
-                br_cmd_en <= 1;
                 br_wr_data[31:0] <= data0_out;
                 br_wr_data[63:32] <= data1_out;
+                br_cmd_en <= 1;
+                command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
 `ifdef DBG
                 $display("@(c) write line (1): 0x%h%h", data0_out, data1_out);
 `endif
@@ -415,6 +428,7 @@ module Cache #(
               br_cmd <= 0;  // command read
               br_addr <= burst_cache_line_address;
               br_cmd_en <= 1;
+              command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
               burst_reading <= 1;
               state <= STATE_READ_WAIT_FOR_DATA_READY;
             end
@@ -532,16 +546,24 @@ module Cache #(
         end
 
         STATE_WRITE_FINISH: begin
+          if (command_delay_interval_counter == 0) begin
 `ifdef DBG
-          $display("@(c) read line after eviction from RAM address 0x%h", burst_cache_line_address);
+            $display("@(c) read line after eviction from RAM address 0x%h",
+                     burst_cache_line_address);
 `endif
-          // start reading the cache line
-          br_cmd <= 0;  // command read
-          br_addr <= burst_cache_line_address;
-          br_cmd_en <= 1;
-          burst_writing <= 0;
-          burst_reading <= 1;
-          state <= STATE_READ_WAIT_FOR_DATA_READY;
+            // start reading the cache line
+            br_cmd <= 0;  // command read
+            br_addr <= burst_cache_line_address;
+            br_cmd_en <= 1;
+            command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
+            burst_writing <= 0;
+            burst_reading <= 1;
+            state <= STATE_READ_WAIT_FOR_DATA_READY;
+          end else begin
+`ifdef DBG
+            $display("@(c) waiting for command delay counter %0d", command_delay_interval_counter);
+`endif
+          end
         end
 
       endcase

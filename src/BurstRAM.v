@@ -26,6 +26,7 @@ module BurstRAM #(
     input wire [DATA_BITWIDTH/8-1:0] data_mask,  // not implemented (same as 0 in IP component)
     output reg [DATA_BITWIDTH-1:0] rd_data,  // read data
     output reg rd_data_valid,  // rd_data is valid
+    output reg init_calib,
     output reg busy
 );
 
@@ -76,6 +77,7 @@ module BurstRAM #(
       rd_data_valid <= 0;
       rd_data <= 0;
       busy <= 1;
+      init_calib <= 0;
       init_calib_delay_counter <= 0;
       state <= STATE_INITIATE;
     end else begin
@@ -84,7 +86,8 @@ module BurstRAM #(
 
         STATE_INITIATE: begin
           if (init_calib_delay_counter == CYCLES_BEFORE_INITIATED) begin
-            busy  <= 0;
+            busy <= 0;
+            init_calib <= 1;
             state <= STATE_IDLE;
           end
           init_calib_delay_counter <= init_calib_delay_counter + 1;
