@@ -10,9 +10,19 @@
 // `define INFO
 
 module Cache #(
+    // cache lines 2 ^ value
     parameter LINE_IX_BITWIDTH = 8,
-    parameter BURST_RAM_DEPTH_BITWIDTH = 4,
-    parameter COMMAND_DELAY_INTERVAL = 14
+
+    // bits in the address
+    parameter BURST_RAM_DEPTH_BITWIDTH = 21,
+
+    // the clock cycles delay between commands
+    // see: IPUG943-1.2E Gowin PSRAM Memory Interface HS & HS 2CH IP
+    //      page 30
+    //
+    // note: set value 1 less than spec because of the way
+    //       the counter works the delay is +1
+    parameter COMMAND_DELAY_INTERVAL = 13
 ) (
     input wire clk,
     input wire rst,
