@@ -15,7 +15,7 @@ module BurstRAM #(
     parameter DATA_BITWIDTH = 64,  // must be divisible by 8
     parameter BURST_COUNT = 4,  // number of RAM data sizes transfered per burst
     parameter CYCLES_BEFORE_INITIATED = 10,  // emulates initiation delay
-    parameter CYCLES_BEFORE_DATA_VALID = 8  // emulates read delay
+    parameter CYCLES_BEFORE_DATA_VALID = 6  // emulates read delay
 ) (
     input wire clk,
     input wire rst,

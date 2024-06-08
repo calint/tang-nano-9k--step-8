@@ -355,8 +355,8 @@ module Cache #(
       end
     end else begin
 `ifdef DBG
-      $display("@(*) read 0x%h  line: %0d  column: %0d  data ready: %0d", address, line_ix,
-               column_ix, data_out_ready);
+      $display("@(*) read 0x%h  data out: 0x%h  line: %0d  column: %0d  data ready: %0d", address,
+               data_out, line_ix, column_ix, data_out_ready);
 `endif
     end
   end
