@@ -14,15 +14,13 @@ module TestBench;
   wire clkout;
   wire lock;
   wire clkoutp;
-  wire clkoutd;
   wire clkin = clk;
 
   Gowin_rPLL rpll (
-      .clkout(clkout),  //output clkout
+      .clkout(clkout),  //output clkout 54 MHz
       .lock(lock),  //output lock
-      .clkoutp(clkoutp),  //output clkoutp
-      .clkoutd(clkoutd),  //output clkoutd
-      .clkin(clkin)  //input clkin
+      .clkoutp(clkoutp),  //output clkoutp 54 MHz phased 90 degress
+      .clkin(clkin)  //input clkin 27 MHz
   );
 
   wire br_cmd;
@@ -78,8 +76,7 @@ module TestBench;
       .br_wr_data(br_wr_data),
       .br_data_mask(br_data_mask),
       .br_rd_data(br_rd_data),
-      .br_rd_data_valid(br_rd_data_valid),
-      .br_busy(br_busy)
+      .br_rd_data_valid(br_rd_data_valid)
   );
 
   integer i;

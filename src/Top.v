@@ -8,39 +8,74 @@ module Top (
     output reg [5:0] led,
     input wire uart_rx,
     output wire uart_tx,
-    input wire btn1
+    input wire btn1,
+
+    // Magic ports for PSRAM to be inferred
+    output wire [ 1:0] O_psram_ck,
+    output wire [ 1:0] O_psram_ck_n,
+    inout  wire [ 1:0] IO_psram_rwds,
+    inout  wire [15:0] IO_psram_dq,
+    output wire [ 1:0] O_psram_reset_n,
+    output wire [ 1:0] O_psram_cs_n
 );
 
   assign uart_tx = uart_rx;
 
-  localparam BURST_RAM_DEPTH_BITWIDTH = 4;
+  assign O_psram_reset_n = sys_resetn;
 
-  //-- BurstRAM
-  wire br_cmd;
-  wire br_cmd_en;
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] br_addr;
+  // -- Gowin_rPLLs
+  wire rpll_clkout;
+  wire rpll_lock;
+  wire rpll_clkoutp;
+  wire rpll_clkin = sys_clk;
+
+  Gowin_rPLL rpll (
+      .clkout(rpll_clkout),  //output clkout 54 MHz
+      .lock(rpll_lock),  //output lock
+      .clkoutp(rpll_clkoutp),  //output clkoutp 54 MHz 90 degrees phased
+      .clkin(rpll_clkin)  //input clkin 27 MHz
+  );
+
+  // -- PSRAM_Memory_Interface_HS_V2_Top
+  wire br_clk_d = sys_clk;
+  wire br_memory_clk = rpll_clkout;
+  wire br_memory_clk_p = rpll_clkoutp;
+  wire br_pll_lock = rpll_lock;
+  wire rst_n = sys_rst_n;
   wire [63:0] br_wr_data;
-  wire [7:0] br_data_mask;
   wire [63:0] br_rd_data;
   wire br_rd_data_valid;
-  wire br_busy;
+  wire [20:0] br_addr;
+  wire br_cmd;
+  wire br_cmd_en;
+  wire br_init_calib;
+  wire br_clk_out;
+  wire [7:0] br_data_mask;
 
-  BurstRAM #(
-      .DATA_FILE("RAM.mem"),  // initial RAM content
-      .DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH),  // 2 ^ 4 * 8 B entries
-      .BURST_COUNT(4)  // 4 * 64 bit data per burst
-  ) burst_ram (
-      .clk(sys_clk),
-      .rst(!sys_rst_n),
-      .busy(br_busy),
-      .cmd(br_cmd),  // 0: read, 1: write
-      .cmd_en(br_cmd_en),  // 1: cmd and addr is valid
-      .addr(br_addr),  // 8 bytes word
-      .wr_data(br_wr_data),  // data to write
-      .data_mask(br_data_mask),  // not implemented (same as 0 in IP component)
-      .rd_data(br_rd_data),  // read data
-      .rd_data_valid(br_rd_data_valid)  // rd_data is valid
+  PSRAM_Memory_Interface_HS_V2_Top psram (
+      .clk_d(br_clk_d),  //input clk_d
+      .memory_clk(br_memory_clk),  //input memory_clk
+      .memory_clk_p(br_memory_clk_p),  //input memory_clk_p
+      .pll_lock(br_pll_lock),  //input pll_lock
+      .rst_n(rst_n),  //input rst_n
+      .O_psram_ck(O_psram_ck),  //output [1:0] O_psram_ck
+      .O_psram_ck_n(O_psram_ck_n),  //output [1:0] O_psram_ck_n
+      .IO_psram_dq(IO_psram_dq),  //inout [15:0] IO_psram_dq
+      .IO_psram_rwds(IO_psram_rwds),  //inout [1:0] IO_psram_rwds
+      .O_psram_cs_n(O_psram_cs_n),  //output [1:0] O_psram_cs_n
+      .O_psram_reset_n(O_psram_reset_n),  //output [1:0] O_psram_reset_n
+      .wr_data(br_wr_data),  //input [63:0] wr_data
+      .rd_data(br_rd_data),  //output [63:0] rd_data
+      .rd_data_valid(br_rd_data_valid),  //output rd_data_valid
+      .addr(br_addr),  //input [20:0] addr
+      .cmd(br_cmd),  //input cmd
+      .cmd_en(br_cmd_en),  //input cmd_en
+      .init_calib(br_init_calib),  //output init_calib
+      .clk_out(br_clk_out),  //output clk_out
+      .data_mask(br_data_mask)  //input [7:0] data_mask
   );
+
+  localparam BURST_RAM_DEPTH_BITWIDTH = 21;
 
   // -- Cache
   reg [31:0] address;
@@ -54,8 +89,8 @@ module Top (
       .LINE_IX_BITWIDTH(10),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
-      .clk(sys_clk),
-      .rst(!sys_rst_n),
+      .clk(br_clk_out),
+      .rst(!sys_rst_n || !br_init_calib),
       .address(address),
       .data_out(data_out),
       .data_out_ready(data_out_ready),
@@ -70,15 +105,14 @@ module Top (
       .br_wr_data(br_wr_data),
       .br_data_mask(br_data_mask),
       .br_rd_data(br_rd_data),
-      .br_rd_data_valid(br_rd_data_valid),
-      .br_busy(br_busy)
+      .br_rd_data_valid(br_rd_data_valid)
   );
 
   reg [3:0] state;
 
   // some code so that Gowin EDA doesn't optimize it away
   always @(posedge sys_clk) begin
-    if (!sys_rst_n) begin
+    if (!sys_rst_n || !br_init_calib) begin
       address <= 0;
       data_in <= 0;
       write_enable <= 0;
@@ -89,7 +123,7 @@ module Top (
 
         0: begin  // wait for initiation / busy
           led <= {busy, data_out_ready, data_out[3:0]};
-          if (!br_busy) begin
+          if (br_init_calib) begin
             state <= 1;
           end
         end

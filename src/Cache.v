@@ -29,8 +29,7 @@ module Cache #(
     output reg [63:0] br_wr_data,  // data to write
     output reg [7:0] br_data_mask,  // not implemented (same as 0 in IP component)
     input wire [63:0] br_rd_data,  // read data
-    input wire br_rd_data_valid,  // rd_data is valid
-    input wire br_busy
+    input wire br_rd_data_valid  // rd_data is valid
 );
 
 `ifdef INFO

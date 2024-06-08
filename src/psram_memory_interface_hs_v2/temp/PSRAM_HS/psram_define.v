@@ -3,3 +3,4 @@
 `define clock_reverse
 `define CK0_SINGLE
 `define CK1_DIFF
+`define SIM
