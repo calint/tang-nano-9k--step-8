@@ -119,6 +119,7 @@ module TestBench;
     while (br_busy || !lock) #clk_tk;
 
     // read; cache miss
+    while (busy) #clk_tk;
     address <= 16;
     write_enable <= 0;
     #clk_tk;
@@ -129,6 +130,7 @@ module TestBench;
     else $display("Test 1 FAILED");
 
     // read address 8; cache hit; one cycle delay
+    while (busy) #clk_tk;
     address <= 8;
     write_enable <= 0;
     #clk_tk;
@@ -137,6 +139,7 @@ module TestBench;
     else $display("Test 2 FAILED");
 
     // read; cache miss, invalid line
+    while (busy) #clk_tk;
     address <= 32;
     write_enable <= 0;
     #clk_tk;
@@ -150,6 +153,7 @@ module TestBench;
     else $display("Test 4 FAILED");
 
     // read; cache hit valid
+    while (busy) #clk_tk;
     address <= 12;
     write_enable <= 0;
     #clk_tk;
@@ -158,12 +162,14 @@ module TestBench;
     else $display("Test 5 FAILED");
 
     // write byte; cache hit
+    while (busy) #clk_tk;
     address <= 8;
     data_in <= 32'h0000_00ad;
     write_enable <= 4'b0001;
     #clk_tk;
 
     // read; cache hit valid
+    while (busy) #clk_tk;
     address <= 8;
     write_enable <= 0;
     #clk_tk;
@@ -174,12 +180,14 @@ module TestBench;
     #clk_tk;
 
     // write half-word
+    while (busy) #clk_tk;
     address <= 8;
     data_in <= 32'h00008765;
     write_enable <= 4'b0011;
     #clk_tk;
 
     // read it back
+    while (busy) #clk_tk;
     address <= 8;
     write_enable <= 0;
     #clk_tk;
@@ -188,12 +196,14 @@ module TestBench;
     else $display("Test 8 FAILED");
 
     // write upper half-word
+    while (busy) #clk_tk;
     address <= 8;
     data_in <= 32'hfeef0000;
     write_enable <= 4'b1100;
     #clk_tk;
 
     // read it back
+    while (busy) #clk_tk;
     address <= 8;
     write_enable <= 0;
     #clk_tk;
@@ -202,14 +212,14 @@ module TestBench;
     else $display("Test 9 FAILED");
 
     // write word; cache miss; evict then write
+    while (busy) #clk_tk;
     address <= 64;
     data_in <= 32'habcdef12;
     write_enable <= 4'b1111;
     #clk_tk;
 
-    while (busy) #clk_tk;
-
     // read it back
+    while (busy) #clk_tk;
     address <= 64;
     write_enable <= 0;
     #clk_tk;
@@ -218,12 +228,14 @@ module TestBench;
     else $display("Test 10 FAILED");
 
     // write word; cache hit
+    while (busy) #clk_tk;
     address <= 64;
     data_in <= 32'h1b2d3f42;
     write_enable <= 4'b1111;
     #clk_tk;
 
     // read it back; cache hit
+    while (busy) #clk_tk;
     address <= 64;
     write_enable <= 0;
     #clk_tk;
