@@ -18,7 +18,7 @@ module Cache #(
 
     // the clock cycles delay between commands
     // see: IPUG943-1.2E Gowin PSRAM Memory Interface HS & HS 2CH IP
-    //      page 30
+    //      page 10
     //
     // note: set value 1 less than spec because of the way
     //       the counter works the delay is +1
