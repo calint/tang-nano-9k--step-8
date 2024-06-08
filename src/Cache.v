@@ -279,7 +279,7 @@ module Cache #(
     data_in_7 = 0;
 
     if (burst_reading) begin
-      // writing to the cache line in a burst read
+      // writing to the cache line in a burst read from RAM
       // wire the controls from burst control
       write_enable_0 = burst_write_enable_0;
       write_enable_1 = burst_write_enable_1;
