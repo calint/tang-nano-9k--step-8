@@ -255,11 +255,7 @@ module Cache #(
       7: data_out = data7_out;
     endcase
 
-    // if it is a read
-    data_out_ready = 0;
-    if (!write_enable) begin
-      data_out_ready = cache_line_hit;
-    end
+    data_out_ready = write_enable ? 0 : cache_line_hit;
 
     // if it is a burst read of a cache line connect the 'write_enable_x' to
     // the the state machine 'burst_write_enable_x' register
@@ -404,7 +400,8 @@ module Cache #(
           if (!cache_line_hit && command_delay_interval_counter == 0) begin
             // cache miss, start reading the addressed cache line
 `ifdef DBG
-            $display("@(c) cache miss address 0x%h  write mask: %b", address, write_enable);
+            $display("@(c) cache miss address 0x%h  line: %0d  write mask: %b", address, line_ix,
+                     write_enable);
 `endif
             if (write_enable) begin
 `ifdef DBG
@@ -556,6 +553,7 @@ module Cache #(
         end
 
         STATE_WRITE_FINISH: begin
+          // check if need to wait for command interval delay
           if (command_delay_interval_counter == 0) begin
 `ifdef DBG
             $display("@(c) read line after eviction from RAM address 0x%h",
