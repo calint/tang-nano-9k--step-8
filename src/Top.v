@@ -143,7 +143,14 @@ module Top (
           led <= {busy, data_out_ready, data_out[3:0]};
           write_enable <= 4'b1111;
           address <= address + 4;
-          state <= 0;
+          state <= 4;
+        end
+
+        4: begin  // wait for write to be done
+          led <= {busy, data_out_ready, data_out[3:0]};
+          if (!busy) begin
+            state <= 1;
+          end
         end
 
       endcase
