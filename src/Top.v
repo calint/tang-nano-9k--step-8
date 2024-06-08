@@ -21,8 +21,6 @@ module Top (
 
   assign uart_tx = uart_rx;
 
-  assign O_psram_reset_n = sys_resetn;
-
   // -- Gowin_rPLLs
   wire rpll_clkout;
   wire rpll_lock;
@@ -86,7 +84,7 @@ module Top (
   wire busy;
 
   Cache #(
-      .LINE_IX_BITWIDTH(10),
+      .LINE_IX_BITWIDTH(9),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
       .clk(br_clk_out),
