@@ -155,7 +155,7 @@ module Cache #(
         write_enable_column[i] = burst_write_enable[i];
       end
 
-      // mark cache line dirty
+      // write tag of the fetched cache line
       write_enable_tag = burst_write_enable_tag;
       data_in_tag = {1'b0, 1'b1, line_tag_from_address};
       // note: {dirty, valid, upper address bits}
@@ -333,15 +333,17 @@ module Cache #(
         end
 
         STATE_READ_UPDATE_TAG: begin
+          // note: reading line can be initiated after a cache eviction
+          //       'burst_write_enable[6]' and 7 are then high, set to low
           burst_write_enable[6] <= 0;
           burst_write_enable[7] <= 0;
-          // note: reading line can be initiated after a cache eviction
-          //       'burst_write_enable_6' and 7 are then high, set to low
+          // write the new tag
           burst_write_enable_tag <= 4'b1111;
           state <= STATE_READ_FINISH;
         end
 
         STATE_READ_FINISH: begin
+          // note: tag has been written after all data has settled
           is_burst_reading <= 0;
           burst_write_enable_tag <= 0;
           state <= STATE_IDLE;
