@@ -81,27 +81,27 @@ module Cache #(
   reg [31:0] burst_data_in[COLUMN_COUNT];
 
   reg is_burst_writing;  // set if in burst write operation
-  reg [3:0] burst_write_enable_tag;
+  reg [3:0] burst_tag_write_enable;
   reg [3:0] burst_write_enable[COLUMN_COUNT];
 
-  wire [31:0] line_tag_and_flags_from_cache;
-  reg [3:0] write_enable_tag;
-  reg [31:0] data_to_tag;
+  wire [31:0] cached_line_tag_and_flags;
+  reg [3:0] tag_write_enable;
+  reg [31:0] tag_data_in;
 
   BESDPB #(
       .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
   ) tag (
       .clk(clk),
-      .write_enable(write_enable_tag),
+      .write_enable(tag_write_enable),
       .address(line_ix),
-      .data_in(data_to_tag),
-      .data_out(line_tag_and_flags_from_cache)
+      .data_in(tag_data_in),
+      .data_out(cached_line_tag_and_flags)
   );
 
   // extract portions of the combined tag, valid, dirty line info
-  wire line_valid = line_tag_and_flags_from_cache[LINE_VALID_BIT];
-  wire line_dirty = line_tag_and_flags_from_cache[LINE_DIRTY_BIT];
-  wire [TAG_BITWIDTH-1:0] line_tag_from_cache = line_tag_and_flags_from_cache[TAG_BITWIDTH-1:0];
+  wire line_valid = cached_line_tag_and_flags[LINE_VALID_BIT];
+  wire line_dirty = cached_line_tag_and_flags[LINE_DIRTY_BIT];
+  wire [TAG_BITWIDTH-1:0] line_tag_from_cache = cached_line_tag_and_flags[TAG_BITWIDTH-1:0];
 
   // starting address in burst RAM for the cached line
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {line_tag_from_cache,line_ix}<<2;
@@ -145,8 +145,8 @@ module Cache #(
       column_data_in[i] = 0;
     end
 
-    write_enable_tag = 0;
-    data_to_tag = 0;
+    tag_write_enable = 0;
+    tag_data_in = 0;
 
     if (is_burst_reading) begin
       // writing to the cache line in a burst read from RAM
@@ -155,8 +155,8 @@ module Cache #(
         write_enable_column[i] = burst_write_enable[i];
       end
       // write tag of the fetched cache line
-      write_enable_tag = burst_write_enable_tag;
-      data_to_tag = {1'b0, 1'b1, line_tag_from_address};
+      tag_write_enable = burst_tag_write_enable;
+      tag_data_in = {1'b0, 1'b1, line_tag_from_address};
       // note: {dirty, valid, upper address bits}
     end else if (is_burst_writing) begin
       //
@@ -170,8 +170,8 @@ module Cache #(
         $display("@(*) cache hit, set flag dirty");
 `endif
         // enable write tag with dirty bit set
-        write_enable_tag = 4'b1111;
-        data_to_tag = {1'b1, 1'b1, line_tag_from_address};
+        tag_write_enable = 4'b1111;
+        tag_data_in = {1'b1, 1'b1, line_tag_from_address};
         // note: { dirty, valid, tag }
 
         // connect 'data_in' to the input and set 'write_enable'
@@ -206,7 +206,7 @@ module Cache #(
 
   always_ff @(posedge clk) begin
     if (rst) begin
-      burst_write_enable_tag <= 0;
+      burst_tag_write_enable <= 0;
       for (int i = 0; i < COLUMN_COUNT; i++) begin
         burst_write_enable[i] <= 0;
       end
@@ -327,14 +327,14 @@ module Cache #(
           //       'burst_write_enable[6]' and 7 are then high, set to low
           burst_write_enable[6] <= 0;
           burst_write_enable[7] <= 0;
-          burst_write_enable_tag <= 4'b1111;
+          burst_tag_write_enable <= 4'b1111;
           state <= STATE_READ_FINISH;
         end
 
         STATE_READ_FINISH: begin
           // note: tag has been written after read data has settled
           is_burst_reading <= 0;
-          burst_write_enable_tag <= 0;
+          burst_tag_write_enable <= 0;
           state <= STATE_IDLE;
         end
 
