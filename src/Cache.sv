@@ -71,9 +71,9 @@ module Cache #(
   wire [LINE_IX_BITWIDTH-1:0] line_ix =  address[LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:LINE_IX_BITWIDTH];
   wire [TAG_BITWIDTH-1:0] line_tag_from_address = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
 
-  // starting address in burst RAM for the cache line containing the requested address
+  // starting address in burst RAM for the cache line from the requested address
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
-  // note: <<2 because a cache line contains 8 64 bit data element from the burst (32 B / 8 B = 4)
+  // note: <<2 because a cache line contains 4 64 bit (32 B) data elements from the burst (32 B / 8 B = 4)
 
   // 4 column cache line
 
@@ -103,7 +103,7 @@ module Cache #(
   wire line_dirty = line_tag_and_flags_from_cache[LINE_DIRTY_BIT];
   wire [TAG_BITWIDTH-1:0] line_tag_from_cache = line_tag_and_flags_from_cache[TAG_BITWIDTH-1:0];
 
-  // starting address in burst RAM for the cache line tag
+  // starting address in burst RAM for the cached line
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {line_tag_from_cache,line_ix}<<2;
   // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
 
