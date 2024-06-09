@@ -19,8 +19,15 @@ module Cache #(
     // the clock cycles delay between commands
     // see: IPUG943-1.2E Gowin PSRAM Memory Interface HS & HS 2CH IP
     //      page 10
-    parameter COMMAND_DELAY_INTERVAL = 13
+    parameter COMMAND_DELAY_INTERVAL = 13,
     // note: 1 less than spec because the counter starts 1 cycle late
+
+    // left shifts to convert line address to RAM address
+    parameter LINE_TO_RAM_ADDRESS_LEFT_SHIFT = COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-3
+    // note: -3: RAM has 64 bit words
+    //       -2: RAM has 32 bit words
+    //       -1: RAM has 16 bit words
+    //       -0: RAM has 8 bit words
 ) (
     input wire clk,
     input wire rst,
@@ -72,10 +79,7 @@ module Cache #(
   wire [TAG_BITWIDTH-1:0] address_tag = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
 
   // starting address in burst RAM for the cache line from the requested address
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
-  // note: <<2 because a cache line contains 4 64 bit (32 B) data elements from the burst (32 B / 8 B = 4)
-
-  // 4 column cache line
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<LINE_TO_RAM_ADDRESS_LEFT_SHIFT;
 
   reg burst_is_reading;  // set if in burst read operation
   reg [31:0] burst_data_in[COLUMN_COUNT];
@@ -104,8 +108,7 @@ module Cache #(
   wire [TAG_BITWIDTH-1:0] cached_tag = cached_tag_and_flags[TAG_BITWIDTH-1:0];
 
   // starting address in burst RAM for the cached line
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {cached_tag,line_ix}<<2;
-  // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {cached_tag,line_ix}<<LINE_TO_RAM_ADDRESS_LEFT_SHIFT;
 
   wire cache_line_hit = line_valid && address_tag == cached_tag;
 
