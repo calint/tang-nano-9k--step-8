@@ -94,7 +94,8 @@ module Top (
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
       .clk(br_clk_out),
-      .rst(!sys_rst_n || !br_init_calib),
+      // .rst(!sys_rst_n || !br_init_calib),
+      .rst(!sys_rst_n),
 
       // .address(connect_flash_to_cache ? flash_cache_address : cache_address),
       .address(cache_address),
@@ -115,7 +116,8 @@ module Top (
   );
 
   // ----------------------------------------------------------
-  localparam STARTUP_WAIT = 1_000_000;
+  // localparam STARTUP_WAIT = 1_000_000;
+  localparam STARTUP_WAIT = 10;
   localparam TRANSFER_BYTES_NUM = 32'h0001_0000;
 
   reg [31:0] cache_address_next;
@@ -139,7 +141,8 @@ module Top (
   reg [ 2:0] state = 0;
   reg [ 2:0] return_state = 0;
 
-  always_ff @(posedge br_clk_out) begin
+  // always_ff @(posedge br_clk_out) begin
+  always_ff @(posedge sys_clk) begin
     if (!sys_rst_n) begin
       flash_clk <= 0;
       flash_mosi <= 0;

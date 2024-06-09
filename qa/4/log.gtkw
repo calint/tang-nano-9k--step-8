@@ -1,0 +1,71 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Sat Jun  8 13:11:27 2024
+[*]
+[dumpfile] "/home/c/w/tang-nano-9k--step-8/qa/3/log.vcd"
+[dumpfile_mtime] "Sat Jun  8 13:11:27 2024"
+[dumpfile_size] 186458112
+[savefile] "/home/c/w/tang-nano-9k--step-8/qa/3/log.gtkw"
+[timestart] 49875200
+[size] 1910 1024
+[pos] -1 -1
+*-15.064463 49890400 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TestBench.
+[sst_width] 269
+[signals_width] 350
+[sst_expanded] 1
+[sst_vpaned_height] 304
+@22
+TestBench.dut.IO_psram_dq[15:0]
+@28
+TestBench.dut.IO_psram_rwds[1:0]
+TestBench.dut.O_psram_ck[1:0]
+TestBench.dut.O_psram_ck_n[1:0]
+TestBench.dut.O_psram_cs_n[1:0]
+TestBench.dut.O_psram_reset_n[1:0]
+TestBench.dut.O_psram_reset_n_d[1]
+TestBench.dut.sys_clk
+TestBench.dut.br_init_calib
+TestBench.dut.rpll_lock
+TestBench.dut.rpll_clkoutp
+TestBench.dut.rpll_clkout
+TestBench.dut.\rpll/clkoutd3_o
+TestBench.dut.\psram/u_psram_top/SDTAP_Z[1:0]
+@22
+TestBench.dut.\psram/u_psram_top/STEP[7:0]
+@28
+TestBench.dut.\psram/u_psram_top/VALUE_Z[1:0]
+@22
+TestBench.dut.\psram/u_psram_top/addr_d[20:0]
+@28
+TestBench.dut.\psram/u_psram_top/calib_Z[1:0]
+TestBench.dut.\psram/u_psram_top/clk_x2
+TestBench.dut.\psram/u_psram_top/clk_x2p
+TestBench.dut.\psram/u_psram_top/cmd_calib
+TestBench.dut.\psram/u_psram_top/cmd_en_calib
+TestBench.dut.\psram/u_psram_top/config_done_Z
+TestBench.dut.\psram/u_psram_top/cs_memsync[3]
+@22
+TestBench.dut.\psram/u_psram_top/data_mask_d[7:0]
+@28
+TestBench.dut.\psram/u_psram_top/ddr_rsti
+TestBench.dut.\psram/u_psram_top/dll_lock
+TestBench.dut.\psram/u_psram_top/dll_rsti
+@23
+TestBench.dut.\psram/u_psram_top/out_dq_Z[62:15]
+TestBench.dut.\psram/u_psram_top/rd_data_d[63:0]
+@29
+TestBench.dut.\psram/u_psram_top/rd_data_valid_calib
+TestBench.dut.\psram/u_psram_top/rd_data_valid_d
+TestBench.dut.\psram/u_psram_top/rd_data_valid_d0
+TestBench.dut.\psram/u_psram_top/rd_data_valid_d1
+TestBench.dut.\psram/u_psram_top/rd_data_valid_d1_0[1]
+@23
+TestBench.dut.\psram/u_psram_top/rdbk_data_d0[31:0]
+TestBench.dut.\psram/u_psram_top/rdbk_data_d0_0[63:32]
+@29
+TestBench.dut.\psram/u_psram_top/readd_Z
+TestBench.dut.\psram/u_psram_top/readd_Z_0[1]
+TestBench.dut.\psram/u_psram_top/stop
+[pattern_trace] 1
+[pattern_trace] 0
