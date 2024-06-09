@@ -238,7 +238,6 @@ module Cache #(
               $display("@(c) write");
 `endif
               if (line_dirty) begin
-                // first write it back then read the addressed cache line
 `ifdef DBG
                 $display("@(c) line dirty, evict to RAM address 0x%h",
                          burst_dirty_cache_line_address);
@@ -271,64 +270,56 @@ module Cache #(
           br_cmd_en <= 0;
           if (br_rd_data_valid) begin
             // first data has arrived
-            burst_write_enable[0] <= 4'b1111;
-            burst_data_in[0] <= br_rd_data[31:0];
-
-            burst_write_enable[1] <= 4'b1111;
-            burst_data_in[1] <= br_rd_data[63:32];
 `ifdef DBG
             $display("@(c) read line (1): 0x%h", br_rd_data);
 `endif
+            burst_write_enable[0] <= 4'b1111;
+            burst_data_in[0] <= br_rd_data[31:0];
+            burst_write_enable[1] <= 4'b1111;
+            burst_data_in[1] <= br_rd_data[63:32];
             state <= STATE_READ_1;
           end
         end
 
         STATE_READ_1: begin
           // second data has arrived
-          burst_write_enable[0] <= 0;
-          burst_write_enable[1] <= 0;
-
-          burst_write_enable[2] <= 4'b1111;
-          burst_data_in[2] <= br_rd_data[31:0];
-
-          burst_write_enable[3] <= 4'b1111;
-          burst_data_in[3] <= br_rd_data[63:32];
 `ifdef DBG
           $display("@(c) read line (2): 0x%h", br_rd_data);
 `endif
+          burst_write_enable[0] <= 0;
+          burst_write_enable[1] <= 0;
+          burst_write_enable[2] <= 4'b1111;
+          burst_data_in[2] <= br_rd_data[31:0];
+          burst_write_enable[3] <= 4'b1111;
+          burst_data_in[3] <= br_rd_data[63:32];
           state <= STATE_READ_2;
         end
 
         STATE_READ_2: begin
           // third data has arrived
-          burst_write_enable[2] <= 0;
-          burst_write_enable[3] <= 0;
-
-          burst_write_enable[4] <= 4'b1111;
-          burst_data_in[4] <= br_rd_data[31:0];
-
-          burst_write_enable[5] <= 4'b1111;
-          burst_data_in[5] <= br_rd_data[63:32];
 `ifdef DBG
           $display("@(c) read line (3): 0x%h", br_rd_data);
 `endif
+          burst_write_enable[2] <= 0;
+          burst_write_enable[3] <= 0;
+          burst_write_enable[4] <= 4'b1111;
+          burst_data_in[4] <= br_rd_data[31:0];
+          burst_write_enable[5] <= 4'b1111;
+          burst_data_in[5] <= br_rd_data[63:32];
           state <= STATE_READ_3;
         end
 
         STATE_READ_3: begin
           // last data has arrived
-          burst_write_enable[4] <= 0;
-          burst_write_enable[5] <= 0;
-
-          burst_write_enable[6] <= 4'b1111;
-          burst_data_in[6] <= br_rd_data[31:0];
-
-          burst_write_enable[7] <= 4'b1111;
-          burst_data_in[7] <= br_rd_data[63:32];
-
 `ifdef DBG
           $display("@(c) read line (4): 0x%h", br_rd_data);
 `endif
+          burst_write_enable[4] <= 0;
+          burst_write_enable[5] <= 0;
+          burst_write_enable[6] <= 4'b1111;
+          burst_data_in[6] <= br_rd_data[31:0];
+          burst_write_enable[7] <= 4'b1111;
+          burst_data_in[7] <= br_rd_data[63:32];
           state <= STATE_READ_UPDATE_TAG;
         end
 
@@ -337,13 +328,12 @@ module Cache #(
           //       'burst_write_enable[6]' and 7 are then high, set to low
           burst_write_enable[6] <= 0;
           burst_write_enable[7] <= 0;
-          // write the new tag
           burst_write_enable_tag <= 4'b1111;
           state <= STATE_READ_FINISH;
         end
 
         STATE_READ_FINISH: begin
-          // note: tag has been written after all data has settled
+          // note: tag has been written after read data has settled
           is_burst_reading <= 0;
           burst_write_enable_tag <= 0;
           state <= STATE_IDLE;
