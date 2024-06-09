@@ -121,10 +121,10 @@ module Cache #(
   wire [31:0] column_data_out[COLUMN_COUNT];
 
   generate
-    for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin: data
+    for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin: column
       BESDPB #(
           .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
-      ) data (
+      ) column (
           .clk(clk),
           .write_enable(column_write_enable[i]),
           .address(line_ix),
