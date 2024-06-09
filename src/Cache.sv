@@ -154,7 +154,8 @@ module Cache #(
       for (int i = 0; i < COLUMN_COUNT; i++) begin
         column_write_enable[i] = burst_write_enable[i];
       end
-      // write tag of the fetched cache line
+      // write tag of the fetched cache line when burst is finished reading
+      // in the data for the line
       tag_write_enable = burst_tag_write_enable;
       tag_data_in = {1'b0, 1'b1, address_tag};
       // note: {dirty, valid, upper address bits}
