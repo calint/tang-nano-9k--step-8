@@ -19,10 +19,8 @@ module Cache #(
     // the clock cycles delay between commands
     // see: IPUG943-1.2E Gowin PSRAM Memory Interface HS & HS 2CH IP
     //      page 10
-    //
-    // note: set value 1 less than spec because of the way
-    //       the counter works the delay is +1
     parameter COMMAND_DELAY_INTERVAL = 13
+    // note: 1 less than spec because the counter starts 1 cycle late
 ) (
     input wire clk,
     input wire rst,
@@ -117,7 +115,7 @@ module Cache #(
 
   // 8 byte enabled semi dual port RAM blocks
   // 'data_in' connected either to the input if a cache hit write or to the state machine
-  // that loads a cache lines
+  // that loads a cache line
   reg [31:0] data_in_column[COLUMN_COUNT];
   reg [3:0] write_enable_column[COLUMN_COUNT];
   wire [31:0] data_out_column[COLUMN_COUNT];
@@ -138,23 +136,25 @@ module Cache #(
 
   always @(*) begin
     data_out = data_out_column[column_ix];
-
     data_out_ready = write_enable ? 0 : cache_line_hit;
 
     // if it is a burst read of a cache line connect the 'write_enable[x]' to
     // the the state machine 'burst_write_enable[x]' register
-    write_enable_tag = 0;
-    data_in_tag = 0;
     for (int i = 0; i < COLUMN_COUNT; i++) begin
       write_enable_column[i] = 0;
       data_in_column[i] = 0;
     end
+
+    write_enable_tag = 0;
+    data_in_tag = 0;
+
     if (is_burst_reading) begin
       // writing to the cache line in a burst read from RAM
       // wire the controls from burst control
       for (int i = 0; i < COLUMN_COUNT; i++) begin
         write_enable_column[i] = burst_write_enable[i];
       end
+
       // mark cache line dirty
       write_enable_tag = burst_write_enable_tag;
       data_in_tag = {1'b0, 1'b1, line_tag_from_address};
