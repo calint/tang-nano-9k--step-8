@@ -18,9 +18,9 @@ iverilog -g2005-sv -Winfloop -pfileline=1 -o iverilog.vvp -s TestBench TestBench
     $IDEPTH/simlib/gw1n/prim_tsim.v \
     $SRCPTH/psram_memory_interface_hs_v2/psram_memory_interface_hs_v2.vo \
     $SRCPTH/gowin_rpll/gowin_rpll.v \
-    $SRCPTH/BESDPB.v \
-    $SRCPTH/Cache.v \
-    $SRCPTH/BurstRAM.v
+    $SRCPTH/BESDPB.sv \
+    $SRCPTH/Cache.sv \
+    $SRCPTH/BurstRAM.sv
 
 vvp iverilog.vvp
 rm iverilog.vvp
