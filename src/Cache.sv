@@ -352,7 +352,6 @@ module Cache #(
 `ifdef DBG
           $display("@(c) write line (3): 0x%h%h", column_data_out[4], column_data_out[5]);
 `endif
-          br_cmd_en <= 0;
           br_wr_data[31:0] <= column_data_out[4];
           br_wr_data[63:32] <= column_data_out[5];
           state <= STATE_WRITE_3;
@@ -362,7 +361,6 @@ module Cache #(
 `ifdef DBG
           $display("@(c) write line (4): 0x%h%h", column_data_out[6], column_data_out[7]);
 `endif
-          br_cmd_en <= 0;
           br_wr_data[31:0] <= column_data_out[6];
           br_wr_data[63:32] <= column_data_out[7];
           state <= STATE_WRITE_FINISH;
