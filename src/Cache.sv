@@ -74,12 +74,23 @@ module Cache #(
   // |tag|               address_tag: upper bits followed by 'valid' and 'dirty' flag
 
   // extract cache line info from current address
-  wire [COLUMN_IX_BITWIDTH-1:0] column_ix = address[COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:COLUMN_IX_BITWIDTH];
-  wire [LINE_IX_BITWIDTH-1:0] line_ix =  address[LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:LINE_IX_BITWIDTH];
-  wire [TAG_BITWIDTH-1:0] address_tag = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
+  wire [COLUMN_IX_BITWIDTH-1:0] column_ix = address[
+    COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1
+    -:COLUMN_IX_BITWIDTH
+  ];
+  wire [LINE_IX_BITWIDTH-1:0] line_ix =  address[
+    LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1
+    -:LINE_IX_BITWIDTH
+  ];
+  wire [TAG_BITWIDTH-1:0] address_tag = address[
+    TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1
+    -:TAG_BITWIDTH
+  ];
 
   // starting address in burst RAM for the cache line from the requested address
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<LINE_TO_RAM_ADDRESS_LEFT_SHIFT;
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = {
+    address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH],{LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
+  };
 
   reg burst_is_reading;  // set if in burst read operation
   reg [31:0] burst_data_in[COLUMN_COUNT];
@@ -108,7 +119,10 @@ module Cache #(
   wire [TAG_BITWIDTH-1:0] cached_tag = cached_tag_and_flags[TAG_BITWIDTH-1:0];
 
   // starting address in burst RAM for the cached line
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {cached_tag,line_ix}<<LINE_TO_RAM_ADDRESS_LEFT_SHIFT;
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {
+    {cached_tag,line_ix},
+    {LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
+  };
 
   wire cache_line_hit = line_valid && address_tag == cached_tag;
 
