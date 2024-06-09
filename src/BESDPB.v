@@ -27,15 +27,17 @@ module BESDPB #(
   assign data_out = data[address];
 
   initial begin
+    for (int i = 0; i < 2 ** ADDRESS_BITWIDTH; i++) begin
+      data[i] = 0;
+    end
     if (DATA_FILE != "") begin
       $readmemh(DATA_FILE, data, 0, 2 ** ADDRESS_BITWIDTH - 1);
     end
   end
 
-  integer i;  // used in for loops
   always @(posedge clk) begin
     // $display("RAM: write_enable: %d  address: %h  data_in: %h", write_enable, address, data_in);
-    for (i = 0; i < COLUMN_COUNT; i = i + 1) begin
+    for (int i = 0; i < COLUMN_COUNT; i++) begin
       if (write_enable[i]) begin
         data[address][(i+1)*COLUMN_BITWIDTH-1-:COLUMN_BITWIDTH] <= data_in[(i+1)*COLUMN_BITWIDTH-1-:COLUMN_BITWIDTH];
       end

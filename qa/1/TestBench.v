@@ -82,36 +82,9 @@ module TestBench;
       .br_rd_data_valid(br_rd_data_valid)
   );
 
-  integer i;
-
   initial begin
     $dumpfile("log.vcd");
     $dumpvars(0, TestBench);
-
-    // clear the cache
-    for (i = 0; i < 2 ** 10; i = i + 1) begin
-      cache.tag.data[i]   = 0;
-      cache.data0.data[i] = 0;
-      cache.data1.data[i] = 0;
-      cache.data2.data[i] = 0;
-      cache.data3.data[i] = 0;
-      cache.data4.data[i] = 0;
-      cache.data5.data[i] = 0;
-      cache.data6.data[i] = 0;
-      cache.data7.data[i] = 0;
-    end
-
-    // for (i = 0; i < 4; i = i + 1) begin
-    //   $display(" tag[%0d]: %h", i, cache.tag.data[i]);
-    //   $display("data0[%0d]: %h", i, cache.data0.data[i]);
-    //   $display("data1[%0d]: %h", i, cache.data1.data[i]);
-    //   $display("data2[%0d]: %h", i, cache.data2.data[i]);
-    //   $display("data3[%0d]: %h", i, cache.data3.data[i]);
-    //   $display("data4[%0d]: %h", i, cache.data4.data[i]);
-    //   $display("data5[%0d]: %h", i, cache.data5.data[i]);
-    //   $display("data6[%0d]: %h", i, cache.data6.data[i]);
-    //   $display("data7[%0d]: %h", i, cache.data7.data[i]);
-    // end
 
     #clk_tk;
     sys_rst_n <= 1;
