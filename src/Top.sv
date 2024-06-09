@@ -50,7 +50,7 @@ module Top (
   wire br_clk_out;
   wire [7:0] br_data_mask;
 
-  PSRAM_Memory_Interface_HS_V2_Top psram (
+  PSRAM_Memory_Interface_HS_V2_Top br (
       .clk_d(br_clk_d),  //input clk_d
       .memory_clk(br_memory_clk),  //input memory_clk
       .memory_clk_p(br_memory_clk_p),  //input memory_clk_p
@@ -76,12 +76,12 @@ module Top (
   localparam BURST_RAM_DEPTH_BITWIDTH = 21;
 
   // -- Cache
-  reg [31:0] address;
-  wire [31:0] data_out;
-  wire data_out_ready;
-  reg [31:0] data_in;
-  reg [3:0] write_enable;
-  wire busy;
+  reg [31:0] cache_address;
+  wire [31:0] cache_data_out;
+  wire cache_data_out_ready;
+  reg [31:0] cache_data_in;
+  reg [3:0] cache_write_enable;
+  wire cache_busy;
 
   Cache #(
       .LINE_IX_BITWIDTH(10),
@@ -89,12 +89,12 @@ module Top (
   ) cache (
       .clk(br_clk_out),
       .rst(!sys_rst_n || !br_init_calib),
-      .address(address),
-      .data_out(data_out),
-      .data_out_ready(data_out_ready),
-      .data_in(data_in),
-      .write_enable(write_enable),
-      .busy(busy),
+      .address(cache_address),
+      .data_out(cache_data_out),
+      .data_out_ready(cache_data_out_ready),
+      .data_in(cache_data_in),
+      .write_enable(cache_write_enable),
+      .busy(cache_busy),
 
       // burst ram wiring; prefix 'br_'
       .br_cmd(br_cmd),
@@ -111,44 +111,44 @@ module Top (
   // some code so that Gowin EDA doesn't optimize it away
   always @(posedge sys_clk) begin
     if (!sys_rst_n || !br_init_calib) begin
-      address <= 0;
-      data_in <= 0;
-      write_enable <= 0;
+      cache_address <= 0;
+      cache_data_in <= 0;
+      cache_write_enable <= 0;
       state <= 0;
     end else begin
       led[5] = btn1;  // note: to rid off 'unused warning'
       case (state)
 
         0: begin  // wait for initiation / busy
-          led <= {busy, data_out_ready, data_out[3:0]};
+          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
           if (br_init_calib) begin
             state <= 1;
           end
         end
 
         1: begin  // read from cache
-          led <= {busy, data_out_ready, data_out[3:0]};
-          write_enable <= 0;
+          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+          cache_write_enable <= 0;
           state <= 2;
         end
 
         2: begin
-          led <= {busy, data_out_ready, data_out[3:0]};
-          if (data_out_ready) begin
+          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+          if (cache_data_out_ready) begin
             state <= 3;
           end
         end
 
         3: begin  // write to cache
-          led <= {busy, data_out_ready, data_out[3:0]};
-          write_enable <= 4'b1111;
-          address <= address + 4;
+          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+          cache_write_enable <= 4'b1111;
+          cache_address <= cache_address + 4;
           state <= 4;
         end
 
         4: begin  // wait for write to be done
-          led <= {busy, data_out_ready, data_out[3:0]};
-          if (!busy) begin
+          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+          if (!cache_busy) begin
             state <= 1;
           end
         end
