@@ -64,12 +64,12 @@ module Cache #(
   //                |00| ignored (4 bytes word aligned)
   //          | col |    column_ix: the index of the data in the cached line
   //     |line|          line_ix: index in array where tag and cached data is stored
-  // |tag|               tag_from_address: upper bits followed by 'valid' and 'dirty' flag
+  // |tag|               address_tag: upper bits followed by 'valid' and 'dirty' flag
 
   // extract cache line info from current address
   wire [COLUMN_IX_BITWIDTH-1:0] column_ix = address[COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:COLUMN_IX_BITWIDTH];
   wire [LINE_IX_BITWIDTH-1:0] line_ix =  address[LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:LINE_IX_BITWIDTH];
-  wire [TAG_BITWIDTH-1:0] tag_from_address = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
+  wire [TAG_BITWIDTH-1:0] address_tag = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
 
   // starting address in burst RAM for the cache line from the requested address
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
@@ -107,7 +107,7 @@ module Cache #(
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {tag_from_cache,line_ix}<<2;
   // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
 
-  wire cache_line_hit = line_valid && tag_from_address == tag_from_cache;
+  wire cache_line_hit = line_valid && address_tag == tag_from_cache;
 
   reg [5:0] command_delay_interval_counter;
 
@@ -156,7 +156,7 @@ module Cache #(
       end
       // write tag of the fetched cache line
       tag_write_enable = burst_tag_write_enable;
-      tag_data_in = {1'b0, 1'b1, tag_from_address};
+      tag_data_in = {1'b0, 1'b1, address_tag};
       // note: {dirty, valid, upper address bits}
     end else if (burst_is_writing) begin
       //
@@ -171,7 +171,7 @@ module Cache #(
 `endif
         // enable write tag with dirty bit set
         tag_write_enable = 4'b1111;
-        tag_data_in = {1'b1, 1'b1, tag_from_address};
+        tag_data_in = {1'b1, 1'b1, address_tag};
         // note: { dirty, valid, tag }
 
         // connect 'data_in' to the input and set 'write_enable'
