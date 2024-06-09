@@ -86,7 +86,7 @@ module Cache #(
 
   wire [31:0] line_tag_and_flags_from_cache;
   reg [3:0] write_enable_tag;
-  reg [31:0] data_in_tag;
+  reg [31:0] data_to_tag;
 
   BESDPB #(
       .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
@@ -94,7 +94,7 @@ module Cache #(
       .clk(clk),
       .write_enable(write_enable_tag),
       .address(line_ix),
-      .data_in(data_in_tag),
+      .data_in(data_to_tag),
       .data_out(line_tag_and_flags_from_cache)
   );
 
@@ -116,9 +116,9 @@ module Cache #(
   // 8 instances of byte enabled semi dual port RAM blocks
   // 'data_in' connected either to the input if a cache hit write or to the state machine
   // that first loads a cache line
-  reg [31:0] data_in_column[COLUMN_COUNT];
+  reg [31:0] data_to_column[COLUMN_COUNT];
   reg [3:0] write_enable_column[COLUMN_COUNT];
-  wire [31:0] data_out_column[COLUMN_COUNT];
+  wire [31:0] data_from_column[COLUMN_COUNT];
 
   generate
     for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin: data
@@ -128,36 +128,35 @@ module Cache #(
           .clk(clk),
           .write_enable(write_enable_column[i]),
           .address(line_ix),
-          .data_in(is_burst_reading ? burst_data_in[i] : data_in_column[i]),
-          .data_out(data_out_column[i])
+          .data_in(is_burst_reading ? burst_data_in[i] : data_to_column[i]),
+          .data_out(data_from_column[i])
       );
     end
   endgenerate
 
   always_comb begin
-    data_out = data_out_column[column_ix];
+    data_out = data_from_column[column_ix];
     data_out_ready = write_enable ? 0 : cache_line_hit;
 
     // if it is a burst read of a cache line connect the 'write_enable[x]' to
     // the the state machine 'burst_write_enable[x]' register
     for (int i = 0; i < COLUMN_COUNT; i++) begin
       write_enable_column[i] = 0;
-      data_in_column[i] = 0;
+      data_to_column[i] = 0;
     end
 
     write_enable_tag = 0;
-    data_in_tag = 0;
+    data_to_tag = 0;
 
     if (is_burst_reading) begin
       // writing to the cache line in a burst read from RAM
-      // wire the controls from burst control
+      // select the write from burst registers
       for (int i = 0; i < COLUMN_COUNT; i++) begin
         write_enable_column[i] = burst_write_enable[i];
       end
-
       // write tag of the fetched cache line
       write_enable_tag = burst_write_enable_tag;
-      data_in_tag = {1'b0, 1'b1, line_tag_from_address};
+      data_to_tag = {1'b0, 1'b1, line_tag_from_address};
       // note: {dirty, valid, upper address bits}
     end else if (is_burst_writing) begin
       //
@@ -172,13 +171,13 @@ module Cache #(
 `endif
         // enable write tag with dirty bit set
         write_enable_tag = 4'b1111;
-        data_in_tag = {1'b1, 1'b1, line_tag_from_address};
+        data_to_tag = {1'b1, 1'b1, line_tag_from_address};
         // note: { dirty, valid, tag }
 
-        // connect 'data_in' to the input and set 'write_enable_x'
-        // for the addressed data element in the cache line
+        // connect 'data_in' to the input and set 'write_enable'
+        // for the addressed column in the cache line
         write_enable_column[column_ix] = write_enable;
-        data_in_column[column_ix] = data_in;
+        data_to_column[column_ix] = data_in;
       end else begin  // not (cache_line_hit)
 `ifdef DBG
         $display("@(*) cache miss");
@@ -192,7 +191,7 @@ module Cache #(
     end
   end
 
-  reg [10:0] state;
+  reg [11:0] state;
   localparam STATE_IDLE = 11'b000_0000_0001;
   localparam STATE_READ_WAIT_FOR_DATA_READY = 11'b000_0000_0010;
   localparam STATE_READ_1 = 11'b000_0000_0100;
@@ -241,12 +240,12 @@ module Cache #(
 `ifdef DBG
                 $display("@(c) line dirty, evict to RAM address 0x%h",
                          burst_dirty_cache_line_address);
-                $display("@(c) write line (1): 0x%h%h", data_out_column[0], data_out_column[1]);
+                $display("@(c) write line (1): 0x%h%h", data_from_column[0], data_from_column[1]);
 `endif
                 br_cmd <= 1;  // command write
                 br_addr <= burst_dirty_cache_line_address;
-                br_wr_data[31:0] <= data_out_column[0];
-                br_wr_data[63:32] <= data_out_column[1];
+                br_wr_data[31:0] <= data_from_column[0];
+                br_wr_data[63:32] <= data_from_column[1];
                 br_cmd_en <= 1;
                 command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
                 is_burst_writing <= 1;
@@ -341,31 +340,31 @@ module Cache #(
 
         STATE_WRITE_1: begin
 `ifdef DBG
-          $display("@(c) write line (2): 0x%h%h", data_out_column[2], data_out_column[3]);
+          $display("@(c) write line (2): 0x%h%h", data_from_column[2], data_from_column[3]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_out_column[2];
-          br_wr_data[63:32] <= data_out_column[3];
+          br_wr_data[31:0] <= data_from_column[2];
+          br_wr_data[63:32] <= data_from_column[3];
           state <= STATE_WRITE_2;
         end
 
         STATE_WRITE_2: begin
 `ifdef DBG
-          $display("@(c) write line (3): 0x%h%h", data_out_column[4], data_out_column[5]);
+          $display("@(c) write line (3): 0x%h%h", data_from_column[4], data_from_column[5]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_out_column[4];
-          br_wr_data[63:32] <= data_out_column[5];
+          br_wr_data[31:0] <= data_from_column[4];
+          br_wr_data[63:32] <= data_from_column[5];
           state <= STATE_WRITE_3;
         end
 
         STATE_WRITE_3: begin
 `ifdef DBG
-          $display("@(c) write line (4): 0x%h%h", data_out_column[6], data_out_column[7]);
+          $display("@(c) write line (4): 0x%h%h", data_from_column[6], data_from_column[7]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_out_column[6];
-          br_wr_data[63:32] <= data_out_column[7];
+          br_wr_data[31:0] <= data_from_column[6];
+          br_wr_data[63:32] <= data_from_column[7];
           state <= STATE_WRITE_FINISH;
         end
 
