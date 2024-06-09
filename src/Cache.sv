@@ -104,7 +104,7 @@ module Cache #(
   wire [TAG_BITWIDTH-1:0] line_tag_from_cache = line_tag_and_flags_from_cache[TAG_BITWIDTH-1:0];
 
   // starting address in burst RAM for the cache line tag
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_dirty_cache_line_address = {line_tag_from_cache,line_ix}<<2;
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {line_tag_from_cache,line_ix}<<2;
   // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
 
   wire cache_line_hit = line_valid && line_tag_from_address == line_tag_from_cache;
@@ -239,11 +239,11 @@ module Cache #(
               if (line_dirty) begin
 `ifdef DBG
                 $display("@(c) line dirty, evict to RAM address 0x%h",
-                         burst_dirty_cache_line_address);
+                         cached_line_address);
                 $display("@(c) write line (1): 0x%h%h", column_data_out[0], column_data_out[1]);
 `endif
                 br_cmd <= 1;  // command write
-                br_addr <= burst_dirty_cache_line_address;
+                br_addr <= cached_line_address;
                 br_wr_data[31:0] <= column_data_out[0];
                 br_wr_data[63:32] <= column_data_out[1];
                 br_cmd_en <= 1;
