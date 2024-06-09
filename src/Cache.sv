@@ -72,7 +72,7 @@ module Cache #(
   wire [TAG_BITWIDTH-1:0] line_tag_from_address = address[TAG_BITWIDTH+LINE_IX_BITWIDTH+COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-1-:TAG_BITWIDTH];
 
   // starting address in burst RAM for the cache line containing the requested address
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_cache_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
   // note: <<2 because a cache line contains 8 64 bit data element from the burst (32 B / 8 B = 4)
 
   // 4 column cache line
@@ -253,10 +253,10 @@ module Cache #(
               end
             end else begin  // not (line_dirty)
 `ifdef DBG
-              $display("@(c) read line from RAM address 0x%h", burst_cache_line_address);
+              $display("@(c) read line from RAM address 0x%h", burst_line_address);
 `endif
               br_cmd <= 0;  // command read
-              br_addr <= burst_cache_line_address;
+              br_addr <= burst_line_address;
               br_cmd_en <= 1;
               command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
               is_burst_reading <= 1;
@@ -373,11 +373,11 @@ module Cache #(
           if (command_delay_interval_counter == 0) begin
 `ifdef DBG
             $display("@(c) read line after eviction from RAM address 0x%h",
-                     burst_cache_line_address);
+                     burst_line_address);
 `endif
             // start reading the cache line
             br_cmd <= 0;  // command read
-            br_addr <= burst_cache_line_address;
+            br_addr <= burst_line_address;
             br_cmd_en <= 1;
             command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
             is_burst_writing <= 0;
