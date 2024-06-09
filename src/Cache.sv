@@ -117,7 +117,7 @@ module Cache #(
   // 'data_in' connected either to the input if a cache hit write or to the state machine
   // that first loads a cache line
   reg [31:0] column_data_in[COLUMN_COUNT];
-  reg [3:0] write_enable_column[COLUMN_COUNT];
+  reg [3:0] column_write_enable[COLUMN_COUNT];
   wire [31:0] column_data_out[COLUMN_COUNT];
 
   generate
@@ -126,7 +126,7 @@ module Cache #(
           .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
       ) data (
           .clk(clk),
-          .write_enable(write_enable_column[i]),
+          .write_enable(column_write_enable[i]),
           .address(line_ix),
           .data_in(is_burst_reading ? burst_data_in[i] : column_data_in[i]),
           .data_out(column_data_out[i])
@@ -141,7 +141,7 @@ module Cache #(
     // if it is a burst read of a cache line connect the 'write_enable[x]' to
     // the the state machine 'burst_write_enable[x]' register
     for (int i = 0; i < COLUMN_COUNT; i++) begin
-      write_enable_column[i] = 0;
+      column_write_enable[i] = 0;
       column_data_in[i] = 0;
     end
 
@@ -152,7 +152,7 @@ module Cache #(
       // writing to the cache line in a burst read from RAM
       // select the write from burst registers
       for (int i = 0; i < COLUMN_COUNT; i++) begin
-        write_enable_column[i] = burst_write_enable[i];
+        column_write_enable[i] = burst_write_enable[i];
       end
       // write tag of the fetched cache line
       tag_write_enable = burst_tag_write_enable;
@@ -176,7 +176,7 @@ module Cache #(
 
         // connect 'data_in' to the input and set 'write_enable'
         // for the addressed column in the cache line
-        write_enable_column[column_ix] = write_enable;
+        column_write_enable[column_ix] = write_enable;
         column_data_in[column_ix] = data_in;
       end else begin  // not (cache_line_hit)
 `ifdef DBG
