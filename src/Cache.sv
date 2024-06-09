@@ -84,7 +84,7 @@ module Cache #(
   reg [3:0] burst_tag_write_enable;
   reg [3:0] burst_write_enable[COLUMN_COUNT];
 
-  wire [31:0] tag_and_flags_from_cache;
+  wire [31:0] cached_tag_and_flags;
   reg [3:0] tag_write_enable;
   reg [31:0] tag_data_in;
 
@@ -95,19 +95,19 @@ module Cache #(
       .write_enable(tag_write_enable),
       .address(line_ix),
       .data_in(tag_data_in),
-      .data_out(tag_and_flags_from_cache)
+      .data_out(cached_tag_and_flags)
   );
 
   // extract portions of the combined tag, valid, dirty line info
-  wire line_valid = tag_and_flags_from_cache[LINE_VALID_BIT];
-  wire line_dirty = tag_and_flags_from_cache[LINE_DIRTY_BIT];
-  wire [TAG_BITWIDTH-1:0] tag_from_cache = tag_and_flags_from_cache[TAG_BITWIDTH-1:0];
+  wire line_valid = cached_tag_and_flags[LINE_VALID_BIT];
+  wire line_dirty = cached_tag_and_flags[LINE_DIRTY_BIT];
+  wire [TAG_BITWIDTH-1:0] cached_tag = cached_tag_and_flags[TAG_BITWIDTH-1:0];
 
   // starting address in burst RAM for the cached line
-  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {tag_from_cache,line_ix}<<2;
+  wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {cached_tag,line_ix}<<2;
   // note: <<2 because a cache line contains a burst of 4 64 bit words (32 B / 8 B = 4)
 
-  wire cache_line_hit = line_valid && address_tag == tag_from_cache;
+  wire cache_line_hit = line_valid && address_tag == cached_tag;
 
   reg [5:0] command_delay_interval_counter;
 
