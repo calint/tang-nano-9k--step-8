@@ -237,13 +237,12 @@ module Cache #(
 `ifdef DBG
               $display("@(c) write");
 `endif
-              // write
               if (line_dirty) begin
-                // current cache line dirty; first write it back then read the addressed
-                // cache line
+                // first write it back then read the addressed cache line
 `ifdef DBG
                 $display("@(c) line dirty, evict to RAM address 0x%h",
                          burst_dirty_cache_line_address);
+                $display("@(c) write line (1): 0x%h%h", data_out_column[0], data_out_column[1]);
 `endif
                 br_cmd <= 1;  // command write
                 br_addr <= burst_dirty_cache_line_address;
@@ -251,9 +250,6 @@ module Cache #(
                 br_wr_data[63:32] <= data_out_column[1];
                 br_cmd_en <= 1;
                 command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
-`ifdef DBG
-                $display("@(c) write line (1): 0x%h%h", data0_out, data1_out);
-`endif
                 is_burst_writing <= 1;
                 state <= STATE_WRITE_1;
               end
@@ -261,7 +257,6 @@ module Cache #(
 `ifdef DBG
               $display("@(c) read line from RAM address 0x%h", burst_cache_line_address);
 `endif
-              // read
               br_cmd <= 0;  // command read
               br_addr <= burst_cache_line_address;
               br_cmd_en <= 1;
@@ -354,7 +349,7 @@ module Cache #(
 
         STATE_WRITE_1: begin
 `ifdef DBG
-          $display("@(c) write line (2): 0x%h%h", data2_out, data3_out);
+          $display("@(c) write line (2): 0x%h%h", data_out_column[2], data_out_column[3]);
 `endif
           br_cmd_en <= 0;
           br_wr_data[31:0] <= data_out_column[2];
@@ -364,7 +359,7 @@ module Cache #(
 
         STATE_WRITE_2: begin
 `ifdef DBG
-          $display("@(c) write line (3): 0x%h%h", data4_out, data5_out);
+          $display("@(c) write line (3): 0x%h%h", data_out_column[4], data_out_column[5]);
 `endif
           br_cmd_en <= 0;
           br_wr_data[31:0] <= data_out_column[4];
@@ -374,7 +369,7 @@ module Cache #(
 
         STATE_WRITE_3: begin
 `ifdef DBG
-          $display("@(c) write line (4): 0x%h%h", data6_out, data7_out);
+          $display("@(c) write line (4): 0x%h%h", data_out_column[6], data_out_column[7]);
 `endif
           br_cmd_en <= 0;
           br_wr_data[31:0] <= data_out_column[6];
