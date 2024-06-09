@@ -90,7 +90,7 @@ module Top (
   wire cache_busy;
 
   Cache #(
-      .LINE_IX_BITWIDTH(7),
+      .LINE_IX_BITWIDTH(9),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
       .clk(br_clk_out),
@@ -118,10 +118,11 @@ module Top (
   localparam STARTUP_WAIT = 1_000_000;
   localparam TRANSFER_BYTES_NUM = 32'h0001_0000;
 
+  reg [23:0] read_address;
   reg [31:0] cache_address_next;
-  reg [7:0] current_byte_out = 0;
-  reg [7:0] current_byte_num = 0;
-  reg [7:0] data_in[4];
+  reg [7:0] current_byte_out;
+  reg [3:0] current_byte_num;
+  reg [7:0] data_in[32];
 
   localparam STATE_INIT_POWER = 8'd0;
   localparam STATE_LOAD_CMD_TO_SEND = 8'd1;
@@ -144,42 +145,35 @@ module Top (
       flash_clk <= 0;
       flash_mosi <= 0;
       flash_cs <= 1;
+      read_address <= 0;
       cache_address <= 0;
       cache_address_next <= 0;
+      current_byte_num <= 0;
+      current_byte_out <= 0;
       state <= STATE_INIT_POWER;
     end else begin
       case (state)
 
         STATE_INIT_POWER: begin
-          led <= 6'b11_1110;
+          led <= 6'b111110;
           if (counter > STARTUP_WAIT) begin
+            state   <= STATE_LOAD_CMD_TO_SEND;
             counter <= 0;
-            current_byte_num <= 0;
-            current_byte_out <= 0;
-            state <= STATE_LOAD_CMD_TO_SEND;
           end else begin
             counter <= counter + 1;
           end
         end
 
         STATE_LOAD_CMD_TO_SEND: begin
-          flash_cs <= 0;
-          data_to_send[23-:8] <= 3;
+          flash_cs <= 0;  // enable flash chip
+          data_to_send[23-:8] <= 3;  // read comand
           bits_to_send <= 8;
           state <= STATE_SEND;
           return_state <= STATE_LOAD_ADDRESS_TO_SEND;
         end
 
-        STATE_LOAD_ADDRESS_TO_SEND: begin
-          data_to_send <= 0;
-          bits_to_send <= 24;
-          state <= STATE_SEND;
-          return_state <= STATE_READ_DATA;
-          current_byte_num <= 0;
-        end
-
         STATE_SEND: begin
-          led <= 6'b11_1101;
+          led <= 6'b111101;
           if (counter == 0) begin
             flash_clk <= 0;
             flash_mosi <= data_to_send[23];
@@ -195,22 +189,28 @@ module Top (
           end
         end
 
+        STATE_LOAD_ADDRESS_TO_SEND: begin
+          data_to_send <= read_address;
+          bits_to_send <= 24;
+          state <= STATE_SEND;
+          return_state <= STATE_READ_DATA;
+          current_byte_num <= 0;
+        end
+
         STATE_READ_DATA: begin
-          led <= 6'b11_1011;
-          if (counter[0] == 0) begin
+          led <= 6'b111011;
+          if (!counter[0]) begin
             flash_clk <= 0;
-            counter   <= counter + 1;
             if (counter[3:0] == 0 && counter > 0) begin
+              // note: every 16'th cycle (8 bits * 2 clock cycles) 
               data_in[current_byte_num] <= current_byte_out;
-              current_byte_num <= current_byte_num + 1;
               if (current_byte_num == 3) begin
-                cache_address <= cache_address_next;
-                cache_address_next <= cache_address_next + 4;
-                cache_data_in <= {data_in[3], data_in[2], data_in[1], data_in[0]};
-                cache_write_enable <= 4'b1111;
-                state <= STATE_WRITE_TO_CACHE;
+                // write to cache every 4 bytes
+                state <= STATE_START_WRITE_TO_CACHE;
               end
+              current_byte_num <= current_byte_num + 1;
             end
+            counter <= counter + 1;
           end else begin
             flash_clk <= 1;
             current_byte_out <= {current_byte_out[6:0], flash_miso};
@@ -218,22 +218,29 @@ module Top (
           end
         end
 
+        STATE_START_WRITE_TO_CACHE: begin
+          led <= 6'b110111;
+          cache_address <= cache_address_next;
+          cache_address_next <= cache_address_next + 4;
+          cache_data_in <= {data_in[3], data_in[2], data_in[1], data_in[0]};
+          cache_write_enable <= 4'b1111;
+          state <= STATE_WRITE_TO_CACHE;
+        end
+
         STATE_WRITE_TO_CACHE: begin
-          led <= 6'b11_0111;
+          led <= 6'b101111;
           if (!cache_busy) begin
-            cache_write_enable <= 0;
-            current_byte_num   <= 0;
             if (cache_address_next == 32'h0001_0000) begin
               state <= STATE_DONE;
-            end else begin
-              state <= STATE_READ_DATA;
             end
+            current_byte_num <= 0;
+            state <= STATE_READ_DATA;
           end
         end
 
         STATE_DONE: begin
-          led <= 6'b10_1111;
-          flash_cs <= 1;
+          flash_cs <= 1;  // disable flash chip
+          led <= 6'b011111;
         end
 
       endcase
