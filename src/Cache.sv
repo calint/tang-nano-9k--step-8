@@ -121,7 +121,7 @@ module Cache #(
   wire [31:0] data_out_column[COLUMN_COUNT];
 
   generate
-    for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin
+    for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin: data
       BESDPB #(
           .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
       ) data (
@@ -134,7 +134,7 @@ module Cache #(
     end
   endgenerate
 
-  always @(*) begin
+  always_comb begin
     data_out = data_out_column[column_ix];
     data_out_ready = write_enable ? 0 : cache_line_hit;
 
