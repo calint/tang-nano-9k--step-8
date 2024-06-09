@@ -89,7 +89,7 @@ module Cache #(
 
   // starting address in burst RAM for the cache line from the requested address
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_line_address = {
-    address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH],{LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
+    address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH], {LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
   };
 
   reg burst_is_reading;  // set if in burst read operation
@@ -120,8 +120,7 @@ module Cache #(
 
   // starting address in burst RAM for the cached line
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] cached_line_address = {
-    {cached_tag,line_ix},
-    {LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
+    {cached_tag,line_ix}, {LINE_TO_RAM_ADDRESS_LEFT_SHIFT{1'b0}}
   };
 
   wire cache_line_hit = line_valid && address_tag == cached_tag;
