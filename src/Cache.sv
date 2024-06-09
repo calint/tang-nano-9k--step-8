@@ -73,7 +73,7 @@ module Cache #(
 
   // starting address in burst RAM for the cache line containing the requested address
   wire [BURST_RAM_DEPTH_BITWIDTH-1:0] burst_cache_line_address = address[31:COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH]<<2;
-  // note: <<2 because a cache line contains 4 reads from the burst (32 B / 8 B = 4)
+  // note: <<2 because a cache line contains 8 64 bit data element from the burst (32 B / 8 B = 4)
 
   // 4 column cache line
 
