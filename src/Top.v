@@ -84,7 +84,7 @@ module Top (
   wire busy;
 
   Cache #(
-      .LINE_IX_BITWIDTH(9),
+      .LINE_IX_BITWIDTH(10),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
       .clk(br_clk_out),
