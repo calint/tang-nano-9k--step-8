@@ -126,7 +126,7 @@ module Cache #(
     for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin
       BESDPB #(
           .ADDRESS_BITWIDTH(LINE_IX_BITWIDTH)
-      ) data$i (
+      ) data (
           .clk(clk),
           .write_enable(write_enable_column[i]),
           .address(line_ix),
