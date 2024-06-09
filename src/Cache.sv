@@ -116,9 +116,9 @@ module Cache #(
   // 8 instances of byte enabled semi dual port RAM blocks
   // 'data_in' connected either to the input if a cache hit write or to the state machine
   // that first loads a cache line
-  reg [31:0] data_to_column[COLUMN_COUNT];
+  reg [31:0] column_data_in[COLUMN_COUNT];
   reg [3:0] write_enable_column[COLUMN_COUNT];
-  wire [31:0] data_from_column[COLUMN_COUNT];
+  wire [31:0] column_data_out[COLUMN_COUNT];
 
   generate
     for (genvar i = 0; i < COLUMN_COUNT; i = i + 1) begin: data
@@ -128,21 +128,21 @@ module Cache #(
           .clk(clk),
           .write_enable(write_enable_column[i]),
           .address(line_ix),
-          .data_in(is_burst_reading ? burst_data_in[i] : data_to_column[i]),
-          .data_out(data_from_column[i])
+          .data_in(is_burst_reading ? burst_data_in[i] : column_data_in[i]),
+          .data_out(column_data_out[i])
       );
     end
   endgenerate
 
   always_comb begin
-    data_out = data_from_column[column_ix];
+    data_out = column_data_out[column_ix];
     data_out_ready = write_enable ? 0 : cache_line_hit;
 
     // if it is a burst read of a cache line connect the 'write_enable[x]' to
     // the the state machine 'burst_write_enable[x]' register
     for (int i = 0; i < COLUMN_COUNT; i++) begin
       write_enable_column[i] = 0;
-      data_to_column[i] = 0;
+      column_data_in[i] = 0;
     end
 
     write_enable_tag = 0;
@@ -177,7 +177,7 @@ module Cache #(
         // connect 'data_in' to the input and set 'write_enable'
         // for the addressed column in the cache line
         write_enable_column[column_ix] = write_enable;
-        data_to_column[column_ix] = data_in;
+        column_data_in[column_ix] = data_in;
       end else begin  // not (cache_line_hit)
 `ifdef DBG
         $display("@(*) cache miss");
@@ -240,12 +240,12 @@ module Cache #(
 `ifdef DBG
                 $display("@(c) line dirty, evict to RAM address 0x%h",
                          burst_dirty_cache_line_address);
-                $display("@(c) write line (1): 0x%h%h", data_from_column[0], data_from_column[1]);
+                $display("@(c) write line (1): 0x%h%h", column_data_out[0], column_data_out[1]);
 `endif
                 br_cmd <= 1;  // command write
                 br_addr <= burst_dirty_cache_line_address;
-                br_wr_data[31:0] <= data_from_column[0];
-                br_wr_data[63:32] <= data_from_column[1];
+                br_wr_data[31:0] <= column_data_out[0];
+                br_wr_data[63:32] <= column_data_out[1];
                 br_cmd_en <= 1;
                 command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
                 is_burst_writing <= 1;
@@ -340,31 +340,31 @@ module Cache #(
 
         STATE_WRITE_1: begin
 `ifdef DBG
-          $display("@(c) write line (2): 0x%h%h", data_from_column[2], data_from_column[3]);
+          $display("@(c) write line (2): 0x%h%h", column_data_out[2], column_data_out[3]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_from_column[2];
-          br_wr_data[63:32] <= data_from_column[3];
+          br_wr_data[31:0] <= column_data_out[2];
+          br_wr_data[63:32] <= column_data_out[3];
           state <= STATE_WRITE_2;
         end
 
         STATE_WRITE_2: begin
 `ifdef DBG
-          $display("@(c) write line (3): 0x%h%h", data_from_column[4], data_from_column[5]);
+          $display("@(c) write line (3): 0x%h%h", column_data_out[4], column_data_out[5]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_from_column[4];
-          br_wr_data[63:32] <= data_from_column[5];
+          br_wr_data[31:0] <= column_data_out[4];
+          br_wr_data[63:32] <= column_data_out[5];
           state <= STATE_WRITE_3;
         end
 
         STATE_WRITE_3: begin
 `ifdef DBG
-          $display("@(c) write line (4): 0x%h%h", data_from_column[6], data_from_column[7]);
+          $display("@(c) write line (4): 0x%h%h", column_data_out[6], column_data_out[7]);
 `endif
           br_cmd_en <= 0;
-          br_wr_data[31:0] <= data_from_column[6];
-          br_wr_data[63:32] <= data_from_column[7];
+          br_wr_data[31:0] <= column_data_out[6];
+          br_wr_data[63:32] <= column_data_out[7];
           state <= STATE_WRITE_FINISH;
         end
 

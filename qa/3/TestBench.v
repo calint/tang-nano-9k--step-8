@@ -17,6 +17,9 @@ module TestBench;
   );
 
   initial begin
+    $dumpfile("log.vcd");
+    $dumpvars(0, TestBench);
+
     #1000 sys_rst_n <= 1;
 
     while(!dut.rpll_lock) #clk_tk;
@@ -24,9 +27,6 @@ module TestBench;
 
     while(!dut.br_init_calib) #clk_tk;
     $display("psram init calib");
-
-    // $dumpfile("log.vcd");
-    // $dumpvars(0, TestBench);
 
     $finish;
   end
