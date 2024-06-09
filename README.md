@@ -10,7 +10,7 @@ step-wise development towards a RISC-V rv32i implementation supporting cache of 
 [ ] cache: wait_before_read, wait_after_read, wait_before_write, wait_after_write signals
     instead of generic 'busy' and optimizing access to cached data when writing
 [ ] step 9: read from flash and assert with led
-[ ] step 10: read from flash, write to cache (last 32 bytes 0 to evict the dirty cache lines)
+[ ] step 10: read from flash, write to cache
 [ ] step 11: implement ram interface
 [ ] step 12: adapt riscv core
 ```

@@ -8,6 +8,7 @@
         <File path="src/BESDPB.sv" type="file.verilog" enable="1"/>
         <File path="src/BurstRAM.sv" type="file.verilog" enable="1"/>
         <File path="src/Cache.sv" type="file.verilog" enable="1"/>
+        <File path="src/Flash.sv" type="file.verilog" enable="1"/>
         <File path="src/Top.sv" type="file.verilog" enable="1"/>
         <File path="src/gowin_rpll/gowin_rpll.v" type="file.verilog" enable="1"/>
         <File path="src/psram_memory_interface_hs_v2/psram_memory_interface_hs_v2.v" type="file.verilog" enable="1"/>

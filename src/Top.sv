@@ -16,7 +16,13 @@ module Top (
     inout  wire [ 1:0] IO_psram_rwds,
     inout  wire [15:0] IO_psram_dq,
     output wire [ 1:0] O_psram_reset_n,
-    output wire [ 1:0] O_psram_cs_n
+    output wire [ 1:0] O_psram_cs_n,
+
+    // flash
+    output reg  flash_clk,
+    input  wire flash_miso,
+    output reg  flash_mosi,
+    output reg  flash_cs
 );
 
   assign uart_tx = uart_rx;
@@ -84,16 +90,18 @@ module Top (
   wire cache_busy;
 
   Cache #(
-      .LINE_IX_BITWIDTH(10),
+      .LINE_IX_BITWIDTH(9),
       .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
   ) cache (
       .clk(br_clk_out),
       .rst(!sys_rst_n || !br_init_calib),
+
+      // .address(connect_flash_to_cache ? flash_cache_address : cache_address),
       .address(cache_address),
-      .data_out(cache_data_out),
-      .data_out_ready(cache_data_out_ready),
       .data_in(cache_data_in),
       .write_enable(cache_write_enable),
+      .data_out(cache_data_out),
+      .data_out_ready(cache_data_out_ready),
       .busy(cache_busy),
 
       // burst ram wiring; prefix 'br_'
@@ -106,56 +114,212 @@ module Top (
       .br_rd_data_valid(br_rd_data_valid)
   );
 
-  reg [3:0] state;
+  // ----------------------------------------------------------
+  localparam STARTUP_WAIT = 1_000_000;
+  localparam TRANSFER_BYTES_NUM = 32'h0001_0000;
 
-  // some code so that Gowin EDA doesn't optimize it away
-  always @(posedge sys_clk) begin
-    if (!sys_rst_n || !br_init_calib) begin
-      cache_address <= 0;
-      cache_data_in <= 0;
-      cache_write_enable <= 0;
-      state <= 0;
+  reg [23:0] read_address = 0;
+  reg [7:0] command = 8'h03;
+  reg [7:0] current_byte_out = 0;
+  reg [7:0] current_byte_num = 0;
+  reg [7:0] data_in[32];
+
+  localparam STATE_INIT_POWER = 8'd0;
+  localparam STATE_LOAD_CMD_TO_SEND = 8'd1;
+  localparam STATE_SEND = 8'd2;
+  localparam STATE_LOAD_ADDRESS_TO_SEND = 8'd3;
+  localparam STATE_READ_DATA = 8'd4;
+  localparam STATE_START_WRITE_TO_CACHE = 8'd5;
+  localparam STATE_WRITE_TO_CACHE = 8'd6;
+  localparam STATE_DONE = 8'd7;
+
+  reg [23:0] data_to_send = 0;
+  reg [ 8:0] bits_to_send = 0;
+
+  reg [32:0] counter = 0;
+  reg [ 2:0] state = 0;
+  reg [ 2:0] return_state = 0;
+
+  always_ff @(posedge br_clk_out) begin
+    if (!sys_rst_n) begin
+      flash_clk <= 0;
+      flash_mosi <= 0;
+      flash_cs <= 1;
+      state <= STATE_INIT_POWER;
     end else begin
-      led[5] = btn1;  // note: to rid off 'unused warning'
       case (state)
 
-        0: begin  // wait for initiation / busy
-          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
-          if (br_init_calib) begin
-            state <= 1;
+        STATE_INIT_POWER: begin
+          if (counter > STARTUP_WAIT) begin
+            state <= STATE_LOAD_CMD_TO_SEND;
+            counter <= 0;
+            current_byte_num <= 0;
+            current_byte_out <= 0;
+          end else begin
+            counter <= counter + 1;
           end
         end
 
-        1: begin  // read from cache
-          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
-          cache_write_enable <= 0;
-          state <= 2;
+        STATE_LOAD_CMD_TO_SEND: begin
+          flash_cs <= 0;
+          data_to_send[23-:8] <= command;
+          bits_to_send <= 8;
+          state <= STATE_SEND;
+          return_state <= STATE_LOAD_ADDRESS_TO_SEND;
         end
 
-        2: begin
-          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
-          if (cache_data_out_ready) begin
-            state <= 3;
+        STATE_SEND: begin
+          if (counter == 0) begin
+            flash_clk <= 0;
+            flash_mosi <= data_to_send[23];
+            data_to_send <= {data_to_send[22:0], 1'b0};
+            bits_to_send <= bits_to_send - 1;
+            counter <= 1;
+          end else begin
+            counter   <= 0;
+            flash_clk <= 1;
+            if (bits_to_send == 0) begin
+              state <= return_state;
+            end
           end
         end
 
-        3: begin  // write to cache
-          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
-          cache_write_enable <= 4'b1111;
-          cache_address <= cache_address + 4;
-          state <= 4;
+        STATE_LOAD_ADDRESS_TO_SEND: begin
+          data_to_send <= read_address;
+          bits_to_send <= 24;
+          state <= STATE_SEND;
+          return_state <= STATE_READ_DATA;
+          current_byte_num <= 0;
         end
 
-        4: begin  // wait for write to be done
-          led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+        STATE_READ_DATA: begin
+          if (counter[0] == 0) begin
+            flash_clk <= 0;
+            counter   <= counter + 1;
+            if (counter[3:0] == 0 && counter > 0) begin
+              data_in[current_byte_num] <= current_byte_out;
+              current_byte_num <= current_byte_num + 1;
+              if (current_byte_num == 31) begin
+                state <= STATE_DONE;
+              end
+            end
+          end else begin
+            flash_clk <= 1;
+            current_byte_out <= {current_byte_out[6:0], flash_miso};
+            counter <= counter + 1;
+          end
+        end
+
+        STATE_START_WRITE_TO_CACHE: begin
+          flash_cs <= 1;
+          counter <= read_address;
+          read_address <= read_address + 32;
+          state <= STATE_WRITE_TO_CACHE;
+        end
+
+        STATE_WRITE_TO_CACHE: begin
           if (!cache_busy) begin
-            state <= 1;
+            if (counter == 32) begin
+              cache_write_enable <= 0;
+              counter <= STARTUP_WAIT;
+              state <= STATE_INIT_POWER;
+            end else begin
+              cache_address <= counter;
+              cache_data_in = {
+                data_in[counter+3], data_in[counter+2], data_in[counter+1], data_in[counter]
+              };
+              cache_write_enable <= 4'b1111;
+              counter <= counter + 4;
+              if (counter == TRANSFER_BYTES_NUM) begin
+                state <= STATE_DONE;
+              end
+            end
           end
+        end
+
+        STATE_DONE: begin
         end
 
       endcase
     end
   end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // reg [3:0] state;
+
+  // // some code so that Gowin EDA doesn't optimize it away
+  // always_ff @(posedge sys_clk) begin
+  //   if (!sys_rst_n || !br_init_calib) begin
+  //     cache_address <= 0;
+  //     cache_data_in <= 0;
+  //     cache_write_enable <= 0;
+  //     connect_flash_to_cache <= 1;
+  //     state <= 0;
+  //   end else begin
+  //     led[5] = btn1;  // note: to rid off 'unused warning'
+  //     case (state)
+
+  //       0: begin  // wait for initiation of PSRAM
+  //         led <= {rpll_lock, br_init_calib};
+  //         if (br_init_calib && rpll_lock) begin
+  //           state <= 5;
+  //         end
+  //       end
+
+  //       5: begin  // load cache from flashs
+  //         if (flash_done) begin
+  //           connect_flash_to_cache <= 0;
+  //           state <= 1;
+  //         end
+  //       end
+
+  //       1: begin  // read from cache
+  //         led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+  //         cache_write_enable <= 0;
+  //         state <= 2;
+  //       end
+
+  //       2: begin
+  //         led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+  //         if (cache_data_out_ready) begin
+  //           state <= 3;
+  //         end
+  //       end
+
+  //       3: begin  // write to cache
+  //         led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+  //         cache_write_enable <= 4'b1111;
+  //         cache_address <= cache_address + 4;
+  //         state <= 4;
+  //       end
+
+  //       4: begin  // wait for write to be done
+  //         led <= {cache_busy, cache_data_out_ready, cache_data_out[3:0]};
+  //         if (!cache_busy) begin
+  //           state <= 1;
+  //         end
+  //       end
+
+  //     endcase
+  //   end
+  // end
 
 endmodule
 
