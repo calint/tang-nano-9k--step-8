@@ -77,10 +77,10 @@ module Cache #(
 
   // 4 column cache line
 
-  reg is_burst_reading;  // set if in burst read operation
+  reg burst_is_reading;  // set if in burst read operation
   reg [31:0] burst_data_in[COLUMN_COUNT];
 
-  reg is_burst_writing;  // set if in burst write operation
+  reg burst_is_writing;  // set if in burst write operation
   reg [3:0] burst_tag_write_enable;
   reg [3:0] burst_write_enable[COLUMN_COUNT];
 
@@ -128,7 +128,7 @@ module Cache #(
           .clk(clk),
           .write_enable(column_write_enable[i]),
           .address(line_ix),
-          .data_in(is_burst_reading ? burst_data_in[i] : column_data_in[i]),
+          .data_in(burst_is_reading ? burst_data_in[i] : column_data_in[i]),
           .data_out(column_data_out[i])
       );
     end
@@ -148,7 +148,7 @@ module Cache #(
     tag_write_enable = 0;
     tag_data_in = 0;
 
-    if (is_burst_reading) begin
+    if (burst_is_reading) begin
       // writing to the cache line in a burst read from RAM
       // select the write from burst registers
       for (int i = 0; i < COLUMN_COUNT; i++) begin
@@ -158,7 +158,7 @@ module Cache #(
       tag_write_enable = burst_tag_write_enable;
       tag_data_in = {1'b0, 1'b1, line_tag_from_address};
       // note: {dirty, valid, upper address bits}
-    end else if (is_burst_writing) begin
+    end else if (burst_is_writing) begin
       //
     end else if (write_enable) begin
 `ifdef DBG
@@ -211,8 +211,8 @@ module Cache #(
         burst_write_enable[i] <= 0;
       end
       br_data_mask <= 4'b1111;
-      is_burst_reading <= 0;
-      is_burst_writing <= 0;
+      burst_is_reading <= 0;
+      burst_is_writing <= 0;
       command_delay_interval_counter <= 0;
       state <= STATE_IDLE;
     end else begin
@@ -248,7 +248,7 @@ module Cache #(
                 br_wr_data[63:32] <= column_data_out[1];
                 br_cmd_en <= 1;
                 command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
-                is_burst_writing <= 1;
+                burst_is_writing <= 1;
                 state <= STATE_WRITE_1;
               end
             end else begin  // not (line_dirty)
@@ -259,7 +259,7 @@ module Cache #(
               br_addr <= burst_line_address;
               br_cmd_en <= 1;
               command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
-              is_burst_reading <= 1;
+              burst_is_reading <= 1;
               state <= STATE_READ_WAIT_FOR_DATA_READY;
             end
           end
@@ -333,7 +333,7 @@ module Cache #(
 
         STATE_READ_FINISH: begin
           // note: tag has been written after read data has settled
-          is_burst_reading <= 0;
+          burst_is_reading <= 0;
           burst_tag_write_enable <= 0;
           state <= STATE_IDLE;
         end
@@ -380,8 +380,8 @@ module Cache #(
             br_addr <= burst_line_address;
             br_cmd_en <= 1;
             command_delay_interval_counter <= COMMAND_DELAY_INTERVAL;
-            is_burst_writing <= 0;
-            is_burst_reading <= 1;
+            burst_is_writing <= 0;
+            burst_is_reading <= 1;
             state <= STATE_READ_WAIT_FOR_DATA_READY;
           end else begin
 `ifdef DBG
