@@ -113,9 +113,9 @@ module Cache #(
 
   assign busy = !cache_line_hit || command_delay_interval_counter != 0;
 
-  // 8 byte enabled semi dual port RAM blocks
+  // 8 instances of byte enabled semi dual port RAM blocks
   // 'data_in' connected either to the input if a cache hit write or to the state machine
-  // that loads a cache line
+  // that first loads a cache line
   reg [31:0] data_in_column[COLUMN_COUNT];
   reg [3:0] write_enable_column[COLUMN_COUNT];
   wire [31:0] data_out_column[COLUMN_COUNT];
