@@ -133,13 +133,18 @@ module Top (
   localparam STATE_START_WRITE_TO_CACHE = 8'd5;
   localparam STATE_WRITE_TO_CACHE = 8'd6;
   localparam STATE_DONE = 8'd7;
+  localparam STATE_CACHE_TEST_1 = 8'd8;
+  localparam STATE_CACHE_TEST_2 = 8'd9;
+  localparam STATE_CACHE_TEST_FAIL = 8'd10;
 
   reg [23:0] data_to_send = 0;
-  reg [ 8:0] bits_to_send = 0;
+  reg [ 4:0] bits_to_send = 0;
 
-  reg [32:0] counter = 0;
-  reg [ 2:0] state = 0;
-  reg [ 2:0] return_state = 0;
+  reg [31:0] counter = 0;
+  reg [ 4:0] state = 0;
+  reg [ 4:0] return_state = 0;
+
+  reg [31:0] clock_cycle;
 
   // always_ff @(posedge br_clk_out) begin
   always_ff @(posedge sys_clk) begin
@@ -149,8 +154,10 @@ module Top (
       flash_cs <= 1;
       cache_address <= 0;
       cache_address_next <= 0;
+      clock_cycle <= 0;
       state <= STATE_INIT_POWER;
     end else begin
+      clock_cycle = clock_cycle + 1;
       case (state)
 
         STATE_INIT_POWER: begin
@@ -167,14 +174,14 @@ module Top (
 
         STATE_LOAD_CMD_TO_SEND: begin
           flash_cs <= 0;
-          data_to_send[23-:8] <= 3;
+          data_to_send[23-:8] <= 3;  // command 3: read
           bits_to_send <= 8;
           state <= STATE_SEND;
           return_state <= STATE_LOAD_ADDRESS_TO_SEND;
         end
 
         STATE_LOAD_ADDRESS_TO_SEND: begin
-          data_to_send <= 0;
+          data_to_send <= 0;  // address 0x0
           bits_to_send <= 24;
           state <= STATE_SEND;
           return_state <= STATE_READ_DATA;
@@ -183,7 +190,8 @@ module Top (
 
         STATE_SEND: begin
           led <= 6'b11_1101;
-          if (counter == 0) begin
+          if (!counter[0]) begin
+            // at clock to low
             flash_clk <= 0;
             flash_mosi <= data_to_send[23];
             data_to_send <= {data_to_send[22:0], 1'b0};
@@ -200,18 +208,15 @@ module Top (
 
         STATE_READ_DATA: begin
           led <= 6'b11_1011;
-          if (counter[0] == 0) begin
+          if (!counter[0]) begin
             flash_clk <= 0;
             counter   <= counter + 1;
             if (counter[3:0] == 0 && counter > 0) begin
+              // every 16 clock ticks (8 bit * 2)
               data_in[current_byte_num] <= current_byte_out;
               current_byte_num <= current_byte_num + 1;
               if (current_byte_num == 3) begin
-                cache_address <= cache_address_next;
-                cache_address_next <= cache_address_next + 4;
-                cache_data_in <= {data_in[3], data_in[2], data_in[1], data_in[0]};
-                cache_write_enable <= 4'b1111;
-                state <= STATE_WRITE_TO_CACHE;
+                state <= STATE_START_WRITE_TO_CACHE;
               end
             end
           end else begin
@@ -219,6 +224,14 @@ module Top (
             current_byte_out <= {current_byte_out[6:0], flash_miso};
             counter <= counter + 1;
           end
+        end
+
+        STATE_START_WRITE_TO_CACHE: begin
+          cache_address <= cache_address_next;
+          cache_address_next <= cache_address_next + 4;
+          cache_data_in <= {data_in[3], data_in[2], data_in[1], data_in[0]};
+          cache_write_enable <= 4'b1111;
+          state <= STATE_WRITE_TO_CACHE;
         end
 
         STATE_WRITE_TO_CACHE: begin
@@ -237,6 +250,28 @@ module Top (
         STATE_DONE: begin
           led <= 6'b10_1111;
           flash_cs <= 1;
+          state <= STATE_CACHE_TEST_1;
+        end
+
+        STATE_CACHE_TEST_1: begin
+          cache_address = 0;
+          cache_write_enable <= 0;
+          state <= STATE_CACHE_TEST_2;
+        end
+
+        STATE_CACHE_TEST_2: begin
+          if (!cache_busy) begin
+            if (cache_data_out == 32'h1234abcd) begin
+              led   <= 6'b01_1111;
+              state <= STATE_CACHE_TEST_1;
+            end else begin
+              state <= STATE_CACHE_TEST_FAIL;
+            end
+          end
+        end
+
+        STATE_CACHE_TEST_FAIL: begin
+          led <= 6'b00_0000;
         end
 
       endcase

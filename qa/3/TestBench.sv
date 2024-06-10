@@ -13,7 +13,7 @@ module TestBench;
 
   wire [5:0] led;
   wire flash_clk;
-  wire flash_miso;
+  reg flash_miso = 1;
   wire flash_mosi;
   wire flash_cs;
 
@@ -35,11 +35,13 @@ module TestBench;
 
     #1000 sys_rst_n <= 1;
 
-    while (!dut.rpll_lock) #clk_tk;
-    $display("rpll locked");
+    // while (!dut.rpll_lock) #clk_tk;
+    // $display("rpll locked");
 
-    while (!dut.br_init_calib) #clk_tk;
-    $display("psram init calib");
+    // while (!dut.br_init_calib) #clk_tk;
+    // $display("psram init calib");
+
+    while (dut.clock_cycle < 1000) #clk_tk;
 
     $finish;
   end
