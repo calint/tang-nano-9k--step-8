@@ -215,7 +215,7 @@ module Cache #(
     end
   end
 
-  reg [11:0] state;
+  reg [10:0] state;
   localparam STATE_IDLE = 11'b000_0000_0001;
   localparam STATE_READ_WAIT_FOR_DATA_READY = 11'b000_0000_0010;
   localparam STATE_READ_1 = 11'b000_0000_0100;
