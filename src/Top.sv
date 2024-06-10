@@ -118,7 +118,7 @@ module Top (
   // ----------------------------------------------------------
   // localparam STARTUP_WAIT = 1_000_000;
   localparam STARTUP_WAIT = 10;
-  localparam TRANSFER_BYTES_NUM = 32'h0001_0000;
+  localparam FLASH_TRANSFER_BYTES_NUM = 32'h0001_0000;
 
   reg [31:0] cache_address_next;
   reg [7:0] current_byte_out = 0;
@@ -132,7 +132,7 @@ module Top (
   localparam STATE_READ_DATA = 8'd4;
   localparam STATE_START_WRITE_TO_CACHE = 8'd5;
   localparam STATE_WRITE_TO_CACHE = 8'd6;
-  localparam STATE_DONE = 8'd7;
+  localparam STATE_TRANSFER_DONE = 8'd7;
   localparam STATE_CACHE_TEST_1 = 8'd8;
   localparam STATE_CACHE_TEST_2 = 8'd9;
   localparam STATE_CACHE_TEST_FAIL = 8'd10;
@@ -239,15 +239,15 @@ module Top (
           if (!cache_busy) begin
             cache_write_enable <= 0;
             current_byte_num   <= 0;
-            if (cache_address_next == 32'h0001_0000) begin
-              state <= STATE_DONE;
+            if (cache_address_next == FLASH_TRANSFER_BYTES_NUM) begin
+              state <= STATE_TRANSFER_DONE;
             end else begin
               state <= STATE_READ_DATA;
             end
           end
         end
 
-        STATE_DONE: begin
+        STATE_TRANSFER_DONE: begin
           led <= 6'b10_1111;
           flash_cs <= 1;
           state <= STATE_CACHE_TEST_1;
