@@ -57,11 +57,11 @@ module Top (
   wire [7:0] br_data_mask;
 
   PSRAM_Memory_Interface_HS_V2_Top br (
+      .rst_n(rst_n),  //input rst_n
       .clk_d(br_clk_d),  //input clk_d
       .memory_clk(br_memory_clk),  //input memory_clk
       .memory_clk_p(br_memory_clk_p),  //input memory_clk_p
       .pll_lock(br_pll_lock),  //input pll_lock
-      .rst_n(rst_n),  //input rst_n
       .O_psram_ck(O_psram_ck),  //output [1:0] O_psram_ck
       .O_psram_ck_n(O_psram_ck_n),  //output [1:0] O_psram_ck_n
       .IO_psram_dq(IO_psram_dq),  //inout [15:0] IO_psram_dq
@@ -90,14 +90,14 @@ module Top (
   wire cache_busy;
 
   Cache #(
-      .LINE_IX_BITWIDTH(7),
-      .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH)
+      .LINE_IX_BITWIDTH(6), // 2 KB cache
+      .BURST_RAM_DEPTH_BITWIDTH(BURST_RAM_DEPTH_BITWIDTH),
+      .RAM_ADDRESSING(1) // 16 bit words
   ) cache (
-      .clk(br_clk_out),
       // .rst(!sys_rst_n || !br_init_calib),
       .rst(!sys_rst_n),
+      .clk(br_clk_out),
 
-      // .address(connect_flash_to_cache ? flash_cache_address : cache_address),
       .address(cache_address),
       .data_in(cache_data_in),
       .write_enable(cache_write_enable),
@@ -254,9 +254,11 @@ module Top (
         end
 
         STATE_CACHE_TEST_1: begin
-          cache_address = 0;
-          cache_write_enable <= 0;
-          state <= STATE_CACHE_TEST_2;
+          if (!cache_busy) begin
+            cache_address = 0;
+            cache_write_enable <= 0;
+            state <= STATE_CACHE_TEST_2;
+          end
         end
 
         STATE_CACHE_TEST_2: begin

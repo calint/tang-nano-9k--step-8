@@ -22,20 +22,26 @@ module Cache #(
     parameter COMMAND_DELAY_INTERVAL = 13,
     // note: 1 less than spec because the counter starts 1 cycle late
 
-    // left shifts to convert line address to RAM address
-    parameter LINE_TO_RAM_ADDRESS_LEFT_SHIFT = COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-3
-    // note: -3: RAM has 64 bit words
-    //       -2: RAM has 32 bit words
-    //       -1: RAM has 16 bit words
-    //       -0: RAM has 8 bit words
+    parameter RAM_ADDRESSING = 3
+    // note: 3: RAM has 64 bit words
+    //       2: RAM has 32 bit words
+    //       1: RAM has 16 bit words
+    //       0: RAM has 8 bit words
 ) (
     input wire clk,
     input wire rst,
+
+    // address must be held while busy + 1 cycle
     input wire [31:0] address,
+
     output reg [31:0] data_out,
     output reg data_out_ready,
     input wire [31:0] data_in,
+
+    // write enable must be held while busy + 1 cycle
     input wire [3:0] write_enable,
+
+    // asserted when busy reading / writing cache lines
     output wire busy,
 
     // burst RAM wiring; prefix 'br_'
@@ -65,6 +71,7 @@ module Cache #(
   localparam TAG_BITWIDTH = 32 - LINE_IX_BITWIDTH - COLUMN_IX_BITWIDTH - ZEROS_BITWIDTH;
   localparam LINE_VALID_BIT = TAG_BITWIDTH;
   localparam LINE_DIRTY_BIT = TAG_BITWIDTH + 1;
+  localparam LINE_TO_RAM_ADDRESS_LEFT_SHIFT = COLUMN_IX_BITWIDTH+ZEROS_BITWIDTH-RAM_ADDRESSING;
 
   // wires dividing the address into components
   // |tag|line| col |00| address
